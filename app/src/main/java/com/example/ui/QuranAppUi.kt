@@ -69,6 +69,7 @@ fun QuranAppUi(viewModel: QuranViewModel) {
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         modifier = Modifier.fillMaxSize()
     ) { paddingValues ->
         Box(
@@ -129,7 +130,7 @@ fun LoginScreen(viewModel: QuranViewModel) {
                     .padding(8.dp),
                 shape = RoundedCornerShape(24.dp),
                 elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-                colors = CardDefaults.cardColors(containerColor = DarkTeal)
+                colors = CardDefaults.cardColors(containerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primaryContainer else DarkTeal)
             ) {
                 Image(
                     painter = painterResource(id = R.drawable.ic_quran_logo),
@@ -145,7 +146,7 @@ fun LoginScreen(viewModel: QuranViewModel) {
                 text = "بَرْنَامَج المَوَاعِيد",
                 style = MaterialTheme.typography.headlineMedium.copy(
                     fontWeight = FontWeight.Bold,
-                    color = DarkTeal,
+                    color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
                     letterSpacing = 1.sp
                 ),
                 textAlign = TextAlign.Center
@@ -154,7 +155,7 @@ fun LoginScreen(viewModel: QuranViewModel) {
             Text(
                 text = "لتنظيم مواعيد حلقات القرآن الكريم والاشتراكات",
                 style = MaterialTheme.typography.bodyMedium.copy(
-                    color = MediumTeal,
+                    color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f) else MediumTeal,
                     fontWeight = FontWeight.Medium
                 ),
                 textAlign = TextAlign.Center,
@@ -178,7 +179,7 @@ fun LoginScreen(viewModel: QuranViewModel) {
                         text = "تسجيل الدخول الآمن",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
-                            color = DarkTeal
+                            color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal
                         )
                     )
 
@@ -195,16 +196,16 @@ fun LoginScreen(viewModel: QuranViewModel) {
                         visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = DarkTeal,
-                            focusedLabelColor = DarkTeal,
-                            cursorColor = DarkTeal
+                            focusedBorderColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                            focusedLabelColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                            cursorColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal
                         ),
                         trailingIcon = {
                             IconButton(onClick = { passwordVisible = !passwordVisible }) {
                                 Icon(
                                     imageVector = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
                                     contentDescription = "رؤية كلمة السر",
-                                    tint = MediumTeal
+                                    tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.secondary else MediumTeal
                                 )
                             }
                         },
@@ -212,7 +213,7 @@ fun LoginScreen(viewModel: QuranViewModel) {
                             Icon(
                                 imageVector = Icons.Filled.Lock,
                                 contentDescription = "قفل",
-                                tint = MediumTeal
+                                tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.secondary else MediumTeal
                             )
                         }
                     )
@@ -234,7 +235,10 @@ fun LoginScreen(viewModel: QuranViewModel) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(50.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = DarkTeal),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                            contentColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onPrimary else Color.White
+                        ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Icon(
@@ -256,13 +260,13 @@ fun LoginScreen(viewModel: QuranViewModel) {
             Text(
                 text = "بواسطة الشيخ أحمد النمس",
                 style = MaterialTheme.typography.titleSmall.copy(
-                    color = DeepGold,
+                    color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DeepGold,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 0.5.sp
                 ),
                 textAlign = TextAlign.Center,
                 modifier = Modifier
-                    .background(LightTeal.copy(alpha = 0.6f), shape = RoundedCornerShape(12.dp))
+                    .background(if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surfaceVariant else LightTeal.copy(alpha = 0.6f), shape = RoundedCornerShape(12.dp))
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             )
         }
@@ -680,7 +684,7 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
                             text = "تعديل تسمية الساعة",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
-                                color = DarkTeal
+                                color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal
                             )
                         )
                         Spacer(modifier = Modifier.height(16.dp))
@@ -690,6 +694,10 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
                             onValueChange = { editingHeaderCurrentValue = it },
                             label = { Text("اسم الساعة / التوقيت") },
                             singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                                focusedLabelColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal
+                            ),
                             modifier = Modifier.fillMaxWidth()
                         )
 
@@ -707,7 +715,10 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
                                     viewModel.updateDraftHourHeader(index, editingHeaderCurrentValue)
                                     editingHeaderIndex = null
                                 },
-                                colors = ButtonDefaults.buttonColors(containerColor = DarkTeal)
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                                    contentColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onPrimary else Color.White
+                                )
                             ) {
                                 Text("حفظ مؤقت")
                             }
@@ -744,12 +755,12 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
                             text = "تعديل المجموعات والحلقات",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
-                                color = DarkTeal
+                                color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal
                             )
                         )
                         Text(
                             text = "اليوم: $dayName | الساعة: $hourName",
-                            style = MaterialTheme.typography.bodySmall.copy(color = MediumTeal),
+                            style = MaterialTheme.typography.bodySmall.copy(color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurfaceVariant else MediumTeal),
                             modifier = Modifier.padding(top = 4.dp)
                         )
 
@@ -761,6 +772,10 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
                             label = { Text("مجموعة التحفيظ / اسم الطالب") },
                             placeholder = { Text("مثال: مجموعة المائدة، حلقة الحفظ") },
                             maxLines = 4,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                                focusedLabelColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal
+                            ),
                             modifier = Modifier.fillMaxWidth()
                         )
 
@@ -798,7 +813,10 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
                                         editingCellDayIdx = null
                                         editingCellHourIdx = null
                                     },
-                                    colors = ButtonDefaults.buttonColors(containerColor = DarkTeal)
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                                        contentColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onPrimary else Color.White
+                                    )
                                 ) {
                                     Text("حفظ مؤقت")
                                 }
@@ -1349,7 +1367,7 @@ fun StudentsTab(viewModel: QuranViewModel) {
                             text = "إضافة طالب جديد",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
-                                color = DarkTeal
+                                color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal
                             )
                         )
                         Spacer(modifier = Modifier.height(16.dp))
@@ -1360,6 +1378,10 @@ fun StudentsTab(viewModel: QuranViewModel) {
                             label = { Text("اسم الطالب ثلاثي") },
                             placeholder = { Text("مثال: عبد الله أحمد محمد") },
                             singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                                focusedLabelColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal
+                            ),
                             modifier = Modifier.fillMaxWidth()
                         )
 
@@ -1383,7 +1405,10 @@ fun StudentsTab(viewModel: QuranViewModel) {
                                         addStudentInput = ""
                                     }
                                 },
-                                colors = ButtonDefaults.buttonColors(containerColor = DarkTeal)
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                                    contentColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onPrimary else Color.White
+                                )
                             ) {
                                 Text("إضافة")
                             }
@@ -1412,7 +1437,7 @@ fun StudentsTab(viewModel: QuranViewModel) {
                             text = "تعديل بيانات الطالب",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
-                                color = DarkTeal
+                                color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal
                             )
                         )
                         Spacer(modifier = Modifier.height(16.dp))
@@ -1422,6 +1447,10 @@ fun StudentsTab(viewModel: QuranViewModel) {
                             onValueChange = { editingStudentInput = it },
                             label = { Text("اسم الطالب ثلاثي") },
                             singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                                focusedLabelColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal
+                            ),
                             modifier = Modifier.fillMaxWidth()
                         )
 
@@ -1459,7 +1488,10 @@ fun StudentsTab(viewModel: QuranViewModel) {
                                             editingStudentEntity = null
                                         }
                                     },
-                                    colors = ButtonDefaults.buttonColors(containerColor = DarkTeal)
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                                        contentColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onPrimary else Color.White
+                                    )
                                 ) {
                                     Text("حفظ")
                                 }
@@ -1489,7 +1521,7 @@ fun StudentsTab(viewModel: QuranViewModel) {
                             text = "تعديل اسم العمود المالي",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
-                                color = DarkTeal
+                                color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal
                             )
                         )
                         Spacer(modifier = Modifier.height(16.dp))
@@ -1499,6 +1531,10 @@ fun StudentsTab(viewModel: QuranViewModel) {
                             onValueChange = { editingMonthCurrentValue = it },
                             label = { Text("اسم الشهر أو البند") },
                             singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                                focusedLabelColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal
+                            ),
                             modifier = Modifier.fillMaxWidth()
                         )
 
@@ -1516,7 +1552,10 @@ fun StudentsTab(viewModel: QuranViewModel) {
                                     viewModel.updateDraftMonthHeader(index, editingMonthCurrentValue)
                                     editingMonthIndex = null
                                 },
-                                colors = ButtonDefaults.buttonColors(containerColor = DarkTeal)
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                                    contentColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onPrimary else Color.White
+                                )
                             ) {
                                 Text("تعديل مؤقت")
                             }
@@ -1564,7 +1603,7 @@ fun PasswordTab(viewModel: QuranViewModel) {
             Icon(
                 imageVector = Icons.Filled.LockOpen,
                 contentDescription = "إدارة الأمان",
-                tint = DeepGold,
+                tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.tertiary else DeepGold,
                 modifier = Modifier.size(65.dp)
             )
 
@@ -1574,14 +1613,14 @@ fun PasswordTab(viewModel: QuranViewModel) {
                 text = "إدارة كلمة المرور وحماية التطبيق",
                 style = MaterialTheme.typography.titleLarge.copy(
                     fontWeight = FontWeight.Bold,
-                    color = DarkTeal
+                    color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal
                 ),
                 textAlign = TextAlign.Center
             )
 
             Text(
                 text = "يرجى الاحتفاظ بكلمة المرور الجديدة لتتمكن من فتح التطبيق لاحقاً بأمان",
-                style = MaterialTheme.typography.bodySmall.copy(color = MediumTeal),
+                style = MaterialTheme.typography.bodySmall.copy(color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurfaceVariant else MediumTeal),
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = 4.dp, bottom = 24.dp)
             )
@@ -1609,11 +1648,11 @@ fun PasswordTab(viewModel: QuranViewModel) {
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = DarkTeal,
-                            focusedLabelColor = DarkTeal
+                            focusedBorderColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                            focusedLabelColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal
                         ),
                         leadingIcon = {
-                            Icon(Icons.Filled.Lock, contentDescription = "الحالية", tint = MediumTeal)
+                            Icon(Icons.Filled.Lock, contentDescription = "الحالية", tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.secondary else MediumTeal)
                         }
                     )
 
@@ -1630,11 +1669,11 @@ fun PasswordTab(viewModel: QuranViewModel) {
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = DarkTeal,
-                            focusedLabelColor = DarkTeal
+                            focusedBorderColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                            focusedLabelColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal
                         ),
                         leadingIcon = {
-                            Icon(Icons.Filled.Key, contentDescription = "الجديدة", tint = MediumTeal)
+                            Icon(Icons.Filled.Key, contentDescription = "الجديدة", tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.secondary else MediumTeal)
                         }
                     )
 
@@ -1651,11 +1690,11 @@ fun PasswordTab(viewModel: QuranViewModel) {
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = DarkTeal,
-                            focusedLabelColor = DarkTeal
+                            focusedBorderColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                            focusedLabelColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal
                         ),
                         leadingIcon = {
-                            Icon(Icons.Filled.Key, contentDescription = "تأكيد الجديدة", tint = MediumTeal)
+                            Icon(Icons.Filled.Key, contentDescription = "تأكيد الجديدة", tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.secondary else MediumTeal)
                         }
                     )
 
@@ -1680,7 +1719,8 @@ fun PasswordTab(viewModel: QuranViewModel) {
                             .fillMaxWidth()
                             .height(50.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = DarkTeal
+                            containerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                            contentColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onPrimary else Color.White
                         ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
