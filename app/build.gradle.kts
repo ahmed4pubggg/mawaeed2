@@ -47,7 +47,7 @@ android {
       signingConfig = signingConfigs.getByName("release")
     }
     debug {
-      if (file("${rootDir}/debug.keystore").exists()) {
+      if (System.getenv("GITHUB_ACTIONS") != "true" && file("${rootDir}/debug.keystore").exists()) {
         signingConfig = signingConfigs.getByName("debugConfig")
       }
     }
