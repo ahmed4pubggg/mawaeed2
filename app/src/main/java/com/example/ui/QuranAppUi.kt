@@ -881,6 +881,11 @@ fun StudentsTab(viewModel: QuranViewModel) {
     var editingMonthIndex by remember { mutableStateOf<Int?>(null) }
     var editingMonthCurrentValue by remember { mutableStateOf("") }
 
+    // Password verification states for saving payments
+    var isConfirmingPaymentsWithPassword by remember { mutableStateOf(false) }
+    var confirmPasswordInput by remember { mutableStateOf("") }
+    var confirmPasswordError by remember { mutableStateOf<String?>(null) }
+
     // Check if drafts differ from DB to show warning
     val dbMonths = viewModel.monthHeaders.collectAsState().value
     val dbPayments = viewModel.payments.collectAsState().value
@@ -916,7 +921,11 @@ fun StudentsTab(viewModel: QuranViewModel) {
 
                 // Quick Save for payments & months
                 Button(
-                    onClick = { viewModel.saveNamesAndPayments() },
+                    onClick = {
+                        confirmPasswordInput = ""
+                        confirmPasswordError = null
+                        isConfirmingPaymentsWithPassword = true
+                    },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.tertiary else DeepGold,
                         contentColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onTertiary else Color.White
@@ -1571,6 +1580,115 @@ fun StudentsTab(viewModel: QuranViewModel) {
                                 )
                             ) {
                                 Text("تعديل مؤقت")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 4. Confirm Payments with Password Dialog
+        if (isConfirmingPaymentsWithPassword) {
+            Dialog(onDismissRequest = { isConfirmingPaymentsWithPassword = false }) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .padding(20.dp)
+                            .fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Lock,
+                            contentDescription = "قفل الأمان",
+                            tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                            modifier = Modifier.size(36.dp)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "تأكيد كلمة المرور للتثبيت",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal
+                            )
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "يرجى إدخال كلمة سر البرنامج لتثبيت تغييرات الحسابات والمدفوعات ومنع التلاعب.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        OutlinedTextField(
+                            value = confirmPasswordInput,
+                            onValueChange = { 
+                                confirmPasswordInput = it
+                                confirmPasswordError = null
+                            },
+                            label = { Text("كلمة السر") },
+                            singleLine = true,
+                            visualTransformation = PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                            isError = confirmPasswordError != null,
+                            supportingText = {
+                                if (confirmPasswordError != null) {
+                                    Text(
+                                        text = confirmPasswordError!!,
+                                        color = MaterialTheme.colorScheme.error,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                            },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                                focusedLabelColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            TextButton(onClick = { 
+                                isConfirmingPaymentsWithPassword = false 
+                                confirmPasswordInput = ""
+                                confirmPasswordError = null
+                            }) {
+                                Text("إلغاء")
+                            }
+                            Button(
+                                onClick = {
+                                    if (confirmPasswordInput.isEmpty()) {
+                                        confirmPasswordError = "يرجى إدخال كلمة السر أولاً"
+                                    } else {
+                                        viewModel.verifyPasswordAndSave(
+                                            password = confirmPasswordInput,
+                                            onSuccess = {
+                                                isConfirmingPaymentsWithPassword = false
+                                                confirmPasswordInput = ""
+                                                confirmPasswordError = null
+                                            },
+                                            onFailure = { errorMsg ->
+                                                confirmPasswordError = errorMsg
+                                            }
+                                        )
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                                    contentColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onPrimary else Color.White
+                                )
+                            ) {
+                                Text("تأكيد وحفظ")
                             }
                         }
                     }

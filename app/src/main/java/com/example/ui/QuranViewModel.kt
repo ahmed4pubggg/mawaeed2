@@ -333,4 +333,23 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
         passwordChangeMessage = null
         passwordChangeSuccess = false
     }
+
+    /**
+     * Verifies the password and saves the draft names and payments.
+     */
+    fun verifyPasswordAndSave(
+        password: String,
+        onSuccess: () -> Unit,
+        onFailure: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            val correctPassword = repository.getPassword()
+            if (password == correctPassword) {
+                saveNamesAndPayments()
+                onSuccess()
+            } else {
+                onFailure("كلمة السر غير صحيحة، يرجى المحاولة مرة أخرى")
+            }
+        }
+    }
 }
