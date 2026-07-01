@@ -288,13 +288,12 @@ fun MainAppScreen(viewModel: QuranViewModel) {
     )
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // App Header
-        TopAppBar(
+        // App Header - Centered to avoid any empty spaces or offset alignment
+        CenterAlignedTopAppBar(
             title = {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
-                    modifier = Modifier.fillMaxWidth()
+                    horizontalArrangement = Arrangement.Center
                 ) {
                     Image(
                         painter = painterResource(id = R.drawable.ic_quran_logo),
@@ -308,18 +307,20 @@ fun MainAppScreen(viewModel: QuranViewModel) {
                         text = "برنامج المواعيد",
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onPrimaryContainer else Color.White
                         )
                     )
                 }
             },
-            colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkTeal),
+            colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                containerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primaryContainer else DarkTeal
+            ),
             actions = {
                 IconButton(onClick = { viewModel.logout() }) {
                     Icon(
                         imageVector = Icons.Filled.Logout,
                         contentDescription = "خروج",
-                        tint = Color.White
+                        tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onPrimaryContainer else Color.White
                     )
                 }
             }
@@ -348,14 +349,14 @@ fun MainAppScreen(viewModel: QuranViewModel) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(LightTeal.copy(alpha = 0.4f))
+                        .background(if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surfaceVariant else LightTeal.copy(alpha = 0.4f))
                         .padding(vertical = 6.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = "بواسطة الشيخ أحمد النمس حفظه الله",
                         style = MaterialTheme.typography.bodySmall.copy(
-                            color = DarkTeal,
+                            color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
                             fontWeight = FontWeight.Bold
                         )
                     )
@@ -383,11 +384,11 @@ fun MainAppScreen(viewModel: QuranViewModel) {
                                 )
                             },
                             colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = DarkTeal,
-                                selectedTextColor = DarkTeal,
-                                indicatorColor = LightTeal,
-                                unselectedIconColor = MediumTeal.copy(alpha = 0.7f),
-                                unselectedTextColor = MediumTeal.copy(alpha = 0.7f)
+                                selectedIconColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                                selectedTextColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                                indicatorColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primaryContainer else LightTeal,
+                                unselectedIconColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f) else MediumTeal.copy(alpha = 0.7f),
+                                unselectedTextColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f) else MediumTeal.copy(alpha = 0.7f)
                             )
                         )
                     }
@@ -482,13 +483,13 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
                     Box(
                         modifier = Modifier
                             .size(width = 85.dp, height = 55.dp)
-                            .background(DarkTeal)
+                            .background(if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primaryContainer else DarkTeal)
                             .border(1.dp, MaterialTheme.colorScheme.outlineVariant),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = "اليوم",
-                            color = Color.White,
+                            color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onPrimaryContainer else Color.White,
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp
                         )
@@ -499,14 +500,20 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
                         Box(
                             modifier = Modifier
                                 .size(width = 85.dp, height = 70.dp)
-                                .background(if (index % 2 == 0) LightTeal.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface)
+                                .background(
+                                    if (isSystemInDarkTheme()) {
+                                        if (index % 2 == 0) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f) else MaterialTheme.colorScheme.surface
+                                    } else {
+                                        if (index % 2 == 0) LightTeal.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface
+                                    }
+                                )
                                 .border(1.dp, MaterialTheme.colorScheme.outlineVariant),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = day,
                                 fontWeight = FontWeight.Bold,
-                                color = DarkTeal,
+                                color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurface else DarkTeal,
                                 fontSize = 14.sp
                             )
                         }
@@ -526,7 +533,7 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(55.dp)
-                                .background(MediumTeal)
+                                .background(if (isSystemInDarkTheme()) MaterialTheme.colorScheme.secondaryContainer else MediumTeal)
                                 .clickable {
                                     editingHeaderIndex = hourIdx
                                     editingHeaderCurrentValue = hourLabel
@@ -541,7 +548,7 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
                             ) {
                                 Text(
                                     text = hourLabel,
-                                    color = Color.White,
+                                    color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSecondaryContainer else Color.White,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 13.sp,
                                     textAlign = TextAlign.Center,
@@ -552,7 +559,7 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
                                 Icon(
                                     imageVector = Icons.Filled.Edit,
                                     contentDescription = "تعديل الساعة",
-                                    tint = GoldAccent,
+                                    tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.tertiary else GoldAccent,
                                     modifier = Modifier.size(12.dp)
                                 )
                             }
@@ -566,9 +573,15 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
                                     .fillMaxWidth()
                                     .height(70.dp)
                                     .background(
-                                        if (cellContent.isNotEmpty()) LightTeal.copy(alpha = 0.4f)
-                                        else if (dayIdx % 2 == 0) MaterialTheme.colorScheme.surface
-                                        else LightTeal.copy(alpha = 0.1f)
+                                        if (isSystemInDarkTheme()) {
+                                            if (cellContent.isNotEmpty()) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+                                            else if (dayIdx % 2 == 0) MaterialTheme.colorScheme.surface
+                                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
+                                        } else {
+                                            if (cellContent.isNotEmpty()) LightTeal.copy(alpha = 0.4f)
+                                            else if (dayIdx % 2 == 0) MaterialTheme.colorScheme.surface
+                                            else LightTeal.copy(alpha = 0.1f)
+                                        }
                                     )
                                     .clickable {
                                         editingCellDayIdx = dayIdx
@@ -582,7 +595,7 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
                                 if (cellContent.isNotEmpty()) {
                                     Text(
                                         text = cellContent,
-                                        color = DarkTeal,
+                                        color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurface else DarkTeal,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 12.sp,
                                         textAlign = TextAlign.Center,
@@ -592,7 +605,7 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
                                 } else {
                                     Text(
                                         text = "+",
-                                        color = MediumTeal.copy(alpha = 0.4f),
+                                        color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f) else MediumTeal.copy(alpha = 0.4f),
                                         fontSize = 16.sp,
                                         fontWeight = FontWeight.Bold
                                     )
