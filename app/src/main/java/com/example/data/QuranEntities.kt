@@ -39,7 +39,8 @@ data class AppointmentCellEntity(
 @Entity(tableName = "students")
 data class StudentEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    val fullName: String
+    val fullName: String,
+    val lastModified: Long = System.currentTimeMillis()
 )
 
 /**

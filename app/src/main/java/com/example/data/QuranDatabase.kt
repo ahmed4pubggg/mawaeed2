@@ -14,7 +14,7 @@ import androidx.room.RoomDatabase
         MonthHeaderEntity::class,
         PaymentEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class QuranDatabase : RoomDatabase() {

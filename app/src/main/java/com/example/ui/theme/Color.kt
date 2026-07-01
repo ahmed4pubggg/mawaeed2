@@ -19,3 +19,13 @@ val GoldAccent80 = Color(0xFFFFD700)
 val DeepPineNight = Color(0xFF0C1412)
 val PineSurface = Color(0xFF142420)
 
+// High-Contrast Slate & Cyan Theme (Image 5 style)
+val SlateDarkBg = Color(0xFF0B1220)        // Deep slate-navy background
+val SlateSurface = Color(0xFF172033)       // Lighter slate card/surface
+val SlateSurfaceVariant = Color(0xFF2B3A55) // Slate-navy variant
+val CyanPrimary = Color(0xFF2EA6FF)        // High-contrast sky-blue/cyan
+val CyanSecondary = Color(0xFF1EA4E9)      // Secondary cyan
+val LightText = Color(0xFFF5F6F7)          // Crisp light text
+val LightTextSecondary = Color(0xFFB1B9C2)   // Subtitle text
+
+

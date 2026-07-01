@@ -35,6 +35,11 @@ import com.example.data.StudentEntity
 import com.example.ui.theme.*
 import kotlinx.coroutines.flow.collectLatest
 
+enum class StudentSortType {
+    ALPHABETICAL,
+    MODIFICATION_DATE
+}
+
 // Arabic days of the week starting Saturday
 val WEEK_DAYS = listOf(
     "السبت",
@@ -422,7 +427,9 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(12.dp),
-                colors = CardDefaults.cardColors(containerColor = LightTeal.copy(alpha = 0.3f)),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f) else LightTeal.copy(alpha = 0.3f)
+                ),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Row(
@@ -432,14 +439,14 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
                     Icon(
                         imageVector = Icons.Filled.Info,
                         contentDescription = "تنبيه",
-                        tint = DarkTeal,
+                        tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
                         modifier = Modifier.size(24.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "اضغط على الساعات في الأعلى لتعديل توقيتها، واضغط على أي مربع لتعديل المجموعات أو الطلاب. عند الانتهاء اضغط زر التثبيت.",
                         style = MaterialTheme.typography.bodySmall.copy(
-                            color = DarkTeal,
+                            color = if (isSystemInDarkTheme()) LightText else DarkTeal,
                             fontWeight = FontWeight.Medium
                         ),
                         modifier = Modifier.weight(1f)
@@ -448,14 +455,19 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
             }
 
             // Outer Schedule Layout (RTL-Native structure)
-            // Day titles are fixed on the right; Hours columns scroll horizontally to the left
-            Row(
+            // Enabling bidirectional scroll: whole table scrolls vertically, columns scroll horizontally
+            Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp)
-                    .horizontalScroll(rememberScrollState())
+                    .verticalScroll(rememberScrollState())
             ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp)
+                        .horizontalScroll(rememberScrollState())
+                ) {
                 // 1. Right Column: Days of Week (Fixed/Sticky on Right in RTL)
                 Column(
                     modifier = Modifier
@@ -585,7 +597,8 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
                         }
                     }
                 }
-            }
+            } // Close Row
+            } // Close Box
 
             // Save / Save Changes Indicator Panel
             Row(
@@ -628,28 +641,21 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
                     }
                 }
 
-                // Clear/Refresh button & Main Save (Tathbeet) button
-                Row {
-                    OutlinedButton(
-                        onClick = { viewModel.syncDraftsFromDb() },
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.padding(end = 8.dp)
-                    ) {
-                        Icon(Icons.Filled.Refresh, contentDescription = "تراجع", modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("تراجع", fontSize = 12.sp)
-                    }
-
-                    Button(
-                        onClick = { viewModel.saveAppointments() },
-                        colors = ButtonDefaults.buttonColors(containerColor = DarkTeal),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Icon(Icons.Filled.Save, contentDescription = "تثبيت المواعيد")
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("تثبيت المواعيد", fontWeight = FontWeight.Bold)
-                    }
-                }
+                 // Main Save (Tathbeet) button
+                 Row {
+                     Button(
+                         onClick = { viewModel.saveAppointments() },
+                         colors = ButtonDefaults.buttonColors(
+                             containerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                             contentColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onPrimary else Color.White
+                         ),
+                         shape = RoundedCornerShape(10.dp)
+                     ) {
+                         Icon(Icons.Filled.Save, contentDescription = "تثبيت")
+                         Spacer(modifier = Modifier.width(6.dp))
+                         Text("تثبيت", fontWeight = FontWeight.Bold)
+                     }
+                 }
             }
         }
 
@@ -816,6 +822,24 @@ fun StudentsTab(viewModel: QuranViewModel) {
     val draftMonthHeaders = viewModel.draftMonthHeaders
     val draftPayments = viewModel.draftPayments
 
+    // Search and Sort states
+    var searchQuery by remember { mutableStateOf("") }
+    var sortType by remember { mutableStateOf(StudentSortType.ALPHABETICAL) }
+
+    // Filtered and sorted student list
+    val filteredAndSortedStudents = remember(studentList, searchQuery, sortType) {
+        studentList
+            .filter { student ->
+                student.fullName.contains(searchQuery, ignoreCase = true)
+            }
+            .sortedWith { s1, s2 ->
+                when (sortType) {
+                    StudentSortType.ALPHABETICAL -> s1.fullName.compareTo(s2.fullName)
+                    StudentSortType.MODIFICATION_DATE -> s2.lastModified.compareTo(s1.lastModified)
+                }
+            }
+    }
+
     // Edit/Add dialog states
     var isAddingStudent by remember { mutableStateOf(false) }
     var addStudentInput by remember { mutableStateOf("") }
@@ -848,7 +872,10 @@ fun StudentsTab(viewModel: QuranViewModel) {
             ) {
                 Button(
                     onClick = { isAddingStudent = true },
-                    colors = ButtonDefaults.buttonColors(containerColor = DarkTeal),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                        contentColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onPrimary else Color.White
+                    ),
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Icon(Icons.Filled.Add, contentDescription = "إضافة طالب")
@@ -859,7 +886,10 @@ fun StudentsTab(viewModel: QuranViewModel) {
                 // Quick Save for payments & months
                 Button(
                     onClick = { viewModel.saveNamesAndPayments() },
-                    colors = ButtonDefaults.buttonColors(containerColor = DeepGold),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.tertiary else DeepGold,
+                        contentColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onTertiary else Color.White
+                    ),
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Icon(Icons.Filled.Save, contentDescription = "تثبيت الحسابات")
@@ -868,30 +898,152 @@ fun StudentsTab(viewModel: QuranViewModel) {
                 }
             }
 
-            // Student layout header/hint
+            // Search and Sort controls Card (Replaces help card - Requirement 7 & 8)
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 4.dp),
-                colors = CardDefaults.cardColors(containerColor = LightTeal.copy(alpha = 0.2f)),
-                shape = RoundedCornerShape(10.dp)
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f) else LightTeal.copy(alpha = 0.15f)
+                ),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, if (isSystemInDarkTheme()) MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f) else LightTeal.copy(alpha = 0.5f))
             ) {
-                Row(
-                    modifier = Modifier.padding(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Filled.Help, contentDescription = "تلميح", tint = DarkTeal, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "اضغط على الشهور لتغيير الاسم. اضغط على الدوائر البيضاء لتتحول للون الأخضر بصح عند دفع المقابل المالي. اضغط مطولاً على اسم الطالب لتعديله أو حذفه.",
-                        style = MaterialTheme.typography.bodySmall.copy(color = DarkTeal),
-                        modifier = Modifier.weight(1f)
+                Column(modifier = Modifier.padding(12.dp)) {
+                    // Search text field
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        placeholder = { 
+                            Text(
+                                "البحث عن طالب...", 
+                                fontSize = 13.sp,
+                                color = if (isSystemInDarkTheme()) LightTextSecondary else MediumTeal.copy(alpha = 0.7f)
+                            ) 
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Filled.Search,
+                                contentDescription = "بحث",
+                                tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else MediumTeal,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        },
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { searchQuery = "" }) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Clear,
+                                        contentDescription = "مسح",
+                                        tint = if (isSystemInDarkTheme()) LightTextSecondary else MediumTeal,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        },
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                            unfocusedBorderColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.outlineVariant else MediumTeal.copy(alpha = 0.3f),
+                            focusedContainerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surface else Color.White,
+                            unfocusedContainerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surface.copy(alpha = 0.7f) else Color.White
+                        )
                     )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Sort Buttons Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Start
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Sort,
+                            contentDescription = "فرز",
+                            tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else MediumTeal,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "ترتيب حسب:",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isSystemInDarkTheme()) LightText else DarkTeal
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        // Alphabetical Sort Button
+                        val isAlphaSelected = sortType == StudentSortType.ALPHABETICAL
+                        AssistChip(
+                            onClick = { sortType = StudentSortType.ALPHABETICAL },
+                            label = { Text("أبجدي (أ - ي)", fontSize = 11.sp, fontWeight = if (isAlphaSelected) FontWeight.Bold else FontWeight.Normal) },
+                            leadingIcon = {
+                                if (isAlphaSelected) {
+                                    Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(14.dp))
+                                }
+                            },
+                            colors = AssistChipDefaults.assistChipColors(
+                                containerColor = if (isAlphaSelected) {
+                                    if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else LightTeal
+                                } else Color.Transparent,
+                                labelColor = if (isAlphaSelected) {
+                                    if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal
+                                } else {
+                                    if (isSystemInDarkTheme()) LightTextSecondary else MediumTeal
+                                }
+                            ),
+                            border = BorderStroke(
+                                1.dp,
+                                if (isAlphaSelected) {
+                                    if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal
+                                } else {
+                                    if (isSystemInDarkTheme()) MaterialTheme.colorScheme.outlineVariant else MediumTeal.copy(alpha = 0.3f)
+                                }
+                            )
+                        )
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        // Modification Date Sort Button
+                        val isDateSelected = sortType == StudentSortType.MODIFICATION_DATE
+                        AssistChip(
+                            onClick = { sortType = StudentSortType.MODIFICATION_DATE },
+                            label = { Text("تاريخ التعديل", fontSize = 11.sp, fontWeight = if (isDateSelected) FontWeight.Bold else FontWeight.Normal) },
+                            leadingIcon = {
+                                if (isDateSelected) {
+                                    Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(14.dp))
+                                }
+                            },
+                            colors = AssistChipDefaults.assistChipColors(
+                                containerColor = if (isDateSelected) {
+                                    if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else LightTeal
+                                } else Color.Transparent,
+                                labelColor = if (isDateSelected) {
+                                    if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal
+                                } else {
+                                    if (isSystemInDarkTheme()) LightTextSecondary else MediumTeal
+                                }
+                            ),
+                            border = BorderStroke(
+                                1.dp,
+                                if (isDateSelected) {
+                                    if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal
+                                } else {
+                                    if (isSystemInDarkTheme()) MaterialTheme.colorScheme.outlineVariant else MediumTeal.copy(alpha = 0.3f)
+                                }
+                            )
+                        )
+                    }
                 }
             }
 
             if (studentList.isEmpty()) {
-                // Empty State illustration / helper
+                // Empty State illustration / helper (No students registered yet)
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -903,181 +1055,228 @@ fun StudentsTab(viewModel: QuranViewModel) {
                             imageVector = Icons.Filled.People,
                             contentDescription = "لا يوجد طلاب",
                             modifier = Modifier.size(80.dp),
-                            tint = MediumTeal.copy(alpha = 0.3f)
+                            tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f) else MediumTeal.copy(alpha = 0.3f)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = "لا يوجد طلاب مسجلين حالياً",
-                            color = MediumTeal,
+                            color = if (isSystemInDarkTheme()) LightText else DarkTeal,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = "انقر على زر 'إضافة طالب جديد' لبدء التدوين",
-                            style = MaterialTheme.typography.bodySmall.copy(color = MediumTeal.copy(alpha = 0.8f)),
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = if (isSystemInDarkTheme()) LightTextSecondary else MediumTeal.copy(alpha = 0.8f)
+                            ),
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                }
+            } else if (filteredAndSortedStudents.isEmpty()) {
+                // No search results found state
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.Filled.Search,
+                            contentDescription = "لا توجد نتائج",
+                            modifier = Modifier.size(80.dp),
+                            tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f) else MediumTeal.copy(alpha = 0.3f)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "لا توجد نتائج بحث مطابقة",
+                            color = if (isSystemInDarkTheme()) LightText else DarkTeal,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "تأكد من كتابة الاسم بشكل صحيح أو جرب كلمة أخرى",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = if (isSystemInDarkTheme()) LightTextSecondary else MediumTeal.copy(alpha = 0.8f)
+                            ),
                             modifier = Modifier.padding(top = 4.dp)
                         )
                     }
                 }
             } else {
-                // Vertical Scroll for students list, and Horizontal Scroll for columns of months
-                Row(
+                // Unified bidirectional scroll wrapper: whole grid scrolls vertically, columns scroll horizontally
+                Box(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
-                        .padding(horizontal = 8.dp)
-                        .horizontalScroll(rememberScrollState())
+                        .verticalScroll(rememberScrollState())
                 ) {
-                    // 1. Right Column: Student names (Fixed width, vertically scrollable)
-                    // We'll wrap both days and months in a single scrollable container or synchronize them.
-                    // Let's create a combined grid list to avoid scroll desynchronization issues.
-                    // Standard way: Scrollable Column with internal Rows.
-                    // Let's do that! A simple vertical Column representing rows.
-                    val verticalScrollState = rememberScrollState()
-                    Column(
+                    Row(
                         modifier = Modifier
-                            .fillMaxHeight()
-                            .verticalScroll(verticalScrollState)
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp)
+                            .horizontalScroll(rememberScrollState())
                     ) {
-                        // Header student corner
-                        Box(
-                            modifier = Modifier
-                                .size(width = 170.dp, height = 50.dp)
-                                .background(DarkTeal)
-                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "اسم الطالب ثلاثي",
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp
-                            )
-                        }
-
-                        // Student name boxes (Clickable for editing/deleting)
-                        studentList.forEachIndexed { sIdx, student ->
-                            Box(
-                                modifier = Modifier
-                                    .size(width = 170.dp, height = 65.dp)
-                                    .background(if (sIdx % 2 == 0) LightTeal.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface)
-                                    .combinedClickable(
-                                        onClick = {
-                                            editingStudentEntity = student
-                                            editingStudentInput = student.fullName
-                                        },
-                                        onLongClick = {
-                                            editingStudentEntity = student
-                                            editingStudentInput = student.fullName
-                                        }
-                                    )
-                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant)
-                                    .padding(horizontal = 8.dp),
-                                contentAlignment = Alignment.CenterStart
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Text(
-                                        text = student.fullName,
-                                        fontWeight = FontWeight.Bold,
-                                        color = DarkTeal,
-                                        fontSize = 13.sp,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    Icon(
-                                        imageVector = Icons.Filled.Edit,
-                                        contentDescription = "تعديل",
-                                        tint = MediumTeal.copy(alpha = 0.5f),
-                                        modifier = Modifier.size(14.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    // 2. Horizontally scrollable Month Columns
-                    for (monthIdx in 0..5) {
-                        val monthLabel = draftMonthHeaders[monthIdx] ?: "الشهر ${monthIdx + 1}"
-                        val verticalScrollState = rememberScrollState()
+                        // 1. Right Column: Student names (Fixed width, wraps content, scrolled vertically by the parent Box)
                         Column(
-                            modifier = Modifier
-                                .width(105.dp)
-                                .fillMaxHeight()
-                                .verticalScroll(verticalScrollState)
+                            modifier = Modifier.width(170.dp)
                         ) {
-                            // Month Header Button (Renamable)
+                            // Header student corner
                             Box(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(50.dp)
-                                    .background(MediumTeal)
-                                    .clickable {
-                                        editingMonthIndex = monthIdx
-                                        editingMonthCurrentValue = monthLabel
-                                    }
+                                    .size(width = 170.dp, height = 50.dp)
+                                    .background(if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primaryContainer else DarkTeal)
                                     .border(1.dp, MaterialTheme.colorScheme.outlineVariant),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Center,
-                                    modifier = Modifier.padding(horizontal = 2.dp)
-                                ) {
-                                    Text(
-                                        text = monthLabel,
-                                        color = Color.White,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 13.sp,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier.weight(1f),
-                                        textAlign = TextAlign.Center
-                                    )
-                                    Icon(
-                                        imageVector = Icons.Filled.Edit,
-                                        contentDescription = "تعديل الشهر",
-                                        tint = GoldAccent,
-                                        modifier = Modifier.size(11.dp)
-                                    )
-                                }
+                                Text(
+                                    text = "اسم الطالب ثلاثي",
+                                    color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onPrimaryContainer else Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp
+                                )
                             }
 
-                            // Payment Checkboxes for each student in this month
-                            studentList.forEachIndexed { sIdx, student ->
-                                val isPaid = draftPayments[student.id to monthIdx] ?: false
+                            // Student name boxes (Clickable for editing/deleting)
+                            filteredAndSortedStudents.forEachIndexed { sIdx, student ->
+                                Box(
+                                    modifier = Modifier
+                                        .size(width = 170.dp, height = 65.dp)
+                                        .background(
+                                            if (sIdx % 2 == 0) {
+                                                if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f) else LightTeal.copy(alpha = 0.2f)
+                                            } else {
+                                                MaterialTheme.colorScheme.surface
+                                            }
+                                        )
+                                        .combinedClickable(
+                                            onClick = {
+                                                editingStudentEntity = student
+                                                editingStudentInput = student.fullName
+                                            },
+                                            onLongClick = {
+                                                editingStudentEntity = student
+                                                editingStudentInput = student.fullName
+                                            }
+                                        )
+                                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                                        .padding(horizontal = 8.dp),
+                                    contentAlignment = Alignment.CenterStart
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text(
+                                            text = student.fullName,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isSystemInDarkTheme()) LightText else DarkTeal,
+                                            fontSize = 13.sp,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        Icon(
+                                            imageVector = Icons.Filled.Edit,
+                                            contentDescription = "تعديل",
+                                            tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary.copy(alpha = 0.7f) else MediumTeal.copy(alpha = 0.5f),
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // 2. Month Columns (Wraps content, scrolled vertically by the parent Box)
+                        for (monthIdx in 0..5) {
+                            val monthLabel = draftMonthHeaders[monthIdx] ?: "الشهر ${monthIdx + 1}"
+                            Column(
+                                modifier = Modifier.width(105.dp)
+                            ) {
+                                // Month Header Button (Renamable)
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(65.dp)
-                                        .background(if (sIdx % 2 == 0) LightTeal.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surface)
+                                        .height(50.dp)
+                                        .background(if (isSystemInDarkTheme()) MaterialTheme.colorScheme.secondaryContainer else MediumTeal)
+                                        .clickable {
+                                            editingMonthIndex = monthIdx
+                                            editingMonthCurrentValue = monthLabel
+                                        }
                                         .border(1.dp, MaterialTheme.colorScheme.outlineVariant),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    IconButton(
-                                        onClick = { viewModel.toggleDraftPayment(student.id, monthIdx) },
-                                        modifier = Modifier
-                                            .size(40.dp)
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .background(
-                                                if (isPaid) GreenSuccess else LightTeal.copy(alpha = 0.5f)
-                                            )
-                                            .border(
-                                                1.dp,
-                                                if (isPaid) GreenSuccess else MediumTeal.copy(alpha = 0.5f),
-                                                RoundedCornerShape(8.dp)
-                                            )
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center,
+                                        modifier = Modifier.padding(horizontal = 2.dp)
                                     ) {
-                                        if (isPaid) {
-                                            Icon(
-                                                imageVector = Icons.Filled.Check,
-                                                contentDescription = "تم الدفع",
-                                                tint = Color.White,
-                                                modifier = Modifier.size(20.dp)
+                                        Text(
+                                            text = monthLabel,
+                                            color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSecondaryContainer else Color.White,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.weight(1f),
+                                            textAlign = TextAlign.Center
+                                        )
+                                        Icon(
+                                            imageVector = Icons.Filled.Edit,
+                                            contentDescription = "تعديل الشهر",
+                                            tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else GoldAccent,
+                                            modifier = Modifier.size(11.dp)
+                                        )
+                                    }
+                                }
+
+                                // Payment Checkboxes for each student in this month
+                                filteredAndSortedStudents.forEachIndexed { sIdx, student ->
+                                    val isPaid = draftPayments[student.id to monthIdx] ?: false
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(65.dp)
+                                            .background(
+                                                if (sIdx % 2 == 0) {
+                                                    if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f) else LightTeal.copy(alpha = 0.1f)
+                                                } else {
+                                                    MaterialTheme.colorScheme.surface
+                                                }
                                             )
+                                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        IconButton(
+                                            onClick = { viewModel.toggleDraftPayment(student.id, monthIdx) },
+                                            modifier = Modifier
+                                                .size(40.dp)
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(
+                                                    if (isPaid) {
+                                                        GreenSuccess
+                                                    } else {
+                                                        if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surfaceVariant else LightTeal.copy(alpha = 0.5f)
+                                                    }
+                                                )
+                                                .border(
+                                                    1.dp,
+                                                    if (isPaid) {
+                                                        GreenSuccess
+                                                    } else {
+                                                        if (isSystemInDarkTheme()) MaterialTheme.colorScheme.outline else MediumTeal.copy(alpha = 0.5f)
+                                                    },
+                                                    RoundedCornerShape(8.dp)
+                                                )
+                                        ) {
+                                            if (isPaid) {
+                                                Icon(
+                                                    imageVector = Icons.Filled.Check,
+                                                    contentDescription = "تم الدفع",
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -1087,13 +1286,13 @@ fun StudentsTab(viewModel: QuranViewModel) {
                 }
             }
 
-            // Unsaved adjustments indicator row
+            // Unsaved adjustments indicator row (Buttons removed - Requirement 2 & 6)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.Center // Center-aligned for clean visual balance
             ) {
                 if (hasUnsavedChanges) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1115,37 +1314,15 @@ fun StudentsTab(viewModel: QuranViewModel) {
                         Box(
                             modifier = Modifier
                                 .size(8.dp)
-                                .background(GreenSuccess, shape = CircleShape)
+                                .background(if (isSystemInDarkTheme()) Color(0xFF4ADE80) else GreenSuccess, shape = CircleShape)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = "جميع الاشتراكات مثبتة في النظام",
-                            color = GreenSuccess,
+                            color = if (isSystemInDarkTheme()) Color(0xFF4ADE80) else GreenSuccess,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
                         )
-                    }
-                }
-
-                Row {
-                    OutlinedButton(
-                        onClick = { viewModel.syncDraftsFromDb() },
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.padding(end = 8.dp)
-                    ) {
-                        Icon(Icons.Filled.Refresh, contentDescription = "تراجع", modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("تراجع", fontSize = 12.sp)
-                    }
-
-                    Button(
-                        onClick = { viewModel.saveNamesAndPayments() },
-                        colors = ButtonDefaults.buttonColors(containerColor = DarkTeal),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Icon(Icons.Filled.Check, contentDescription = "تثبيت الكل")
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("تثبيت الكل", fontWeight = FontWeight.Bold)
                     }
                 }
             }
