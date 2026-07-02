@@ -33,6 +33,25 @@ import androidx.compose.ui.window.Dialog
 import com.example.R
 import com.example.data.StudentEntity
 import com.example.ui.theme.*
+import com.example.ui.theme.DarkTeal
+import com.example.ui.theme.MediumTeal
+import com.example.ui.theme.LightTeal
+import com.example.ui.theme.GoldAccent
+import com.example.ui.theme.DeepGold
+import com.example.ui.theme.GreenSuccess
+import com.example.ui.theme.LightGreenSuccess
+import com.example.ui.theme.MintGreen80
+import com.example.ui.theme.DarkTeal80
+import com.example.ui.theme.GoldAccent80
+import com.example.ui.theme.DeepPineNight
+import com.example.ui.theme.PineSurface
+import com.example.ui.theme.SlateDarkBg
+import com.example.ui.theme.SlateSurface
+import com.example.ui.theme.SlateSurfaceVariant
+import com.example.ui.theme.CyanPrimary
+import com.example.ui.theme.CyanSecondary
+import com.example.ui.theme.LightText
+import com.example.ui.theme.LightTextSecondary
 import kotlinx.coroutines.flow.collectLatest
 
 enum class StudentSortType {
@@ -415,6 +434,9 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
     var editingCellHourIdx by remember { mutableStateOf<Int?>(null) }
     var editingCellCurrentValue by remember { mutableStateOf("") }
 
+    val horizontalScrollState = rememberScrollState()
+    val verticalScrollState = rememberScrollState()
+
     // Check if drafts differ from actual DB values to show a helpful unsaved hint
     val dbHours = viewModel.hourHeaders.collectAsState().value
     val dbCells = viewModel.appointmentCells.collectAsState().value
@@ -459,27 +481,19 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
                 }
             }
 
-            // Outer Schedule Layout (RTL-Native structure)
-            // Enabling bidirectional scroll: whole table scrolls vertically, columns scroll horizontally
-            Box(
+            // Outer Schedule Layout (RTL-Native structure) with Sticky Headers & Days Column
+            Column(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
             ) {
+                // Top section: Top right Corner cell + Hour Headers (scrollable horizontally in sync)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 8.dp)
-                        .horizontalScroll(rememberScrollState())
                 ) {
-                // 1. Right Column: Days of Week (Fixed/Sticky on Right in RTL)
-                Column(
-                    modifier = Modifier
-                        .background(MaterialTheme.colorScheme.surface)
-                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant)
-                ) {
-                    // Top right empty cell
+                    // Top right corner cell (Fixed, doesn't scroll)
                     Box(
                         modifier = Modifier
                             .size(width = 85.dp, height = 55.dp)
@@ -495,127 +509,159 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
                         )
                     }
 
-                    // Days vertical items
-                    WEEK_DAYS.forEachIndexed { index, day ->
-                        Box(
-                            modifier = Modifier
-                                .size(width = 85.dp, height = 70.dp)
-                                .background(
-                                    if (isSystemInDarkTheme()) {
-                                        if (index % 2 == 0) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f) else MaterialTheme.colorScheme.surface
-                                    } else {
-                                        if (index % 2 == 0) LightTeal.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface
-                                    }
-                                )
-                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = day,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurface else DarkTeal,
-                                fontSize = 14.sp
-                            )
-                        }
-                    }
-                }
-
-                // 2. Hour columns scrolling horizontally on the left of days column
-                for (hourIdx in 0..7) {
-                    val hourLabel = draftHourHeaders[hourIdx] ?: "${hourIdx + 12}"
-                    Column(
+                    // Hour Headers Row (Horizontally scrollable only)
+                    Row(
                         modifier = Modifier
-                            .width(135.dp)
-                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                            .weight(1f)
+                            .horizontalScroll(horizontalScrollState)
                     ) {
-                        // Hour Header Button (Renamable)
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(55.dp)
-                                .background(if (isSystemInDarkTheme()) MaterialTheme.colorScheme.secondaryContainer else MediumTeal)
-                                .clickable {
-                                    editingHeaderIndex = hourIdx
-                                    editingHeaderCurrentValue = hourLabel
-                                }
-                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center,
-                                modifier = Modifier.padding(horizontal = 4.dp)
-                            ) {
-                                Text(
-                                    text = hourLabel,
-                                    color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSecondaryContainer else Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 13.sp,
-                                    textAlign = TextAlign.Center,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                Icon(
-                                    imageVector = Icons.Filled.Edit,
-                                    contentDescription = "تعديل الساعة",
-                                    tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.tertiary else GoldAccent,
-                                    modifier = Modifier.size(12.dp)
-                                )
-                            }
-                        }
-
-                        // Appointment Cells for this Hour Column
-                        for (dayIdx in 0..6) {
-                            val cellContent = draftCells[dayIdx to hourIdx] ?: ""
+                        for (hourIdx in 0..7) {
+                            val hourLabel = draftHourHeaders[hourIdx] ?: "${hourIdx + 12}"
                             Box(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(70.dp)
-                                    .background(
-                                        if (isSystemInDarkTheme()) {
-                                            if (cellContent.isNotEmpty()) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
-                                            else if (dayIdx % 2 == 0) MaterialTheme.colorScheme.surface
-                                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
-                                        } else {
-                                            if (cellContent.isNotEmpty()) LightTeal.copy(alpha = 0.4f)
-                                            else if (dayIdx % 2 == 0) MaterialTheme.colorScheme.surface
-                                            else LightTeal.copy(alpha = 0.1f)
-                                        }
-                                    )
+                                    .width(135.dp)
+                                    .height(55.dp)
+                                    .background(if (isSystemInDarkTheme()) MaterialTheme.colorScheme.secondaryContainer else MediumTeal)
                                     .clickable {
-                                        editingCellDayIdx = dayIdx
-                                        editingCellHourIdx = hourIdx
-                                        editingCellCurrentValue = cellContent
+                                        editingHeaderIndex = hourIdx
+                                        editingHeaderCurrentValue = hourLabel
                                     }
-                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant)
-                                    .padding(4.dp),
+                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant),
                                 contentAlignment = Alignment.Center
                             ) {
-                                if (cellContent.isNotEmpty()) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center,
+                                    modifier = Modifier.padding(horizontal = 4.dp)
+                                ) {
                                     Text(
-                                        text = cellContent,
-                                        color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurface else DarkTeal,
+                                        text = hourLabel,
+                                        color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSecondaryContainer else Color.White,
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 12.sp,
+                                        fontSize = 13.sp,
                                         textAlign = TextAlign.Center,
-                                        maxLines = 3,
-                                        overflow = TextOverflow.Ellipsis
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f)
                                     )
-                                } else {
-                                    Text(
-                                        text = "+",
-                                        color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f) else MediumTeal.copy(alpha = 0.4f),
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Bold
+                                    Icon(
+                                        imageVector = Icons.Filled.Edit,
+                                        contentDescription = "تعديل الساعة",
+                                        tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.tertiary else GoldAccent,
+                                        modifier = Modifier.size(12.dp)
                                     )
                                 }
                             }
                         }
                     }
                 }
-            } // Close Row
-            } // Close Box
+
+                // Bottom section: Days Column + Content Grid (scroll synchronized)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .padding(horizontal = 8.dp)
+                ) {
+                    // Days Column (Vertically scrollable only)
+                    Column(
+                        modifier = Modifier
+                            .width(85.dp)
+                            .verticalScroll(verticalScrollState)
+                            .background(MaterialTheme.colorScheme.surface)
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                    ) {
+                        WEEK_DAYS.forEachIndexed { index, day ->
+                            Box(
+                                modifier = Modifier
+                                    .size(width = 85.dp, height = 70.dp)
+                                    .background(
+                                        if (isSystemInDarkTheme()) {
+                                            if (index % 2 == 0) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f) else MaterialTheme.colorScheme.surface
+                                        } else {
+                                            if (index % 2 == 0) LightTeal.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface
+                                        }
+                                    )
+                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = day,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurface else DarkTeal,
+                                    fontSize = 14.sp
+                                )
+                            }
+                        }
+                    }
+
+                    // Content cells (Both Vertically and Horizontally scrollable in sync)
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .verticalScroll(verticalScrollState)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .horizontalScroll(horizontalScrollState)
+                        ) {
+                            for (hourIdx in 0..7) {
+                                Column(
+                                    modifier = Modifier
+                                        .width(135.dp)
+                                ) {
+                                    for (dayIdx in 0..6) {
+                                        val cellContent = draftCells[dayIdx to hourIdx] ?: ""
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(70.dp)
+                                                .background(
+                                                    if (isSystemInDarkTheme()) {
+                                                        if (cellContent.isNotEmpty()) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+                                                        else if (dayIdx % 2 == 0) MaterialTheme.colorScheme.surface
+                                                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
+                                                    } else {
+                                                        if (cellContent.isNotEmpty()) LightTeal.copy(alpha = 0.4f)
+                                                        else if (dayIdx % 2 == 0) MaterialTheme.colorScheme.surface
+                                                        else LightTeal.copy(alpha = 0.1f)
+                                                    }
+                                                )
+                                                .clickable {
+                                                    editingCellDayIdx = dayIdx
+                                                    editingCellHourIdx = hourIdx
+                                                    editingCellCurrentValue = cellContent
+                                                }
+                                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                                                .padding(4.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            if (cellContent.isNotEmpty()) {
+                                                Text(
+                                                    text = cellContent,
+                                                    color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurface else DarkTeal,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 12.sp,
+                                                    textAlign = TextAlign.Center,
+                                                    maxLines = 3,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            } else {
+                                                Text(
+                                                    text = "+",
+                                                    color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f) else MediumTeal.copy(alpha = 0.4f),
+                                                    fontSize = 16.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             // Save / Save Changes Indicator Panel
             Row(
@@ -886,6 +932,9 @@ fun StudentsTab(viewModel: QuranViewModel) {
     var confirmPasswordInput by remember { mutableStateOf("") }
     var confirmPasswordError by remember { mutableStateOf<String?>(null) }
 
+    val horizontalScrollState = rememberScrollState()
+    val verticalScrollState = rememberScrollState()
+
     // Check if drafts differ from DB to show warning
     val dbMonths = viewModel.monthHeaders.collectAsState().value
     val dbPayments = viewModel.payments.collectAsState().value
@@ -1143,40 +1192,96 @@ fun StudentsTab(viewModel: QuranViewModel) {
                     }
                 }
             } else {
-                // Unified bidirectional scroll wrapper: whole grid scrolls vertically, columns scroll horizontally
-                Box(
+                // Unified bidirectional scroll wrapper with Sticky Headers & Student Names Column
+                Column(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
-                        .verticalScroll(rememberScrollState())
                 ) {
+                    // Top section: Corner cell + Month Headers (horizontally scrollable in sync)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 8.dp)
-                            .horizontalScroll(rememberScrollState())
                     ) {
-                        // 1. Right Column: Student names (Fixed width, wraps content, scrolled vertically by the parent Box)
-                        Column(
-                            modifier = Modifier.width(170.dp)
+                        // Header student corner (Fixed, doesn't scroll)
+                        Box(
+                            modifier = Modifier
+                                .size(width = 170.dp, height = 50.dp)
+                                .background(if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primaryContainer else DarkTeal)
+                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                            contentAlignment = Alignment.Center
                         ) {
-                            // Header student corner
-                            Box(
-                                modifier = Modifier
-                                    .size(width = 170.dp, height = 50.dp)
-                                    .background(if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primaryContainer else DarkTeal)
-                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "اسم الطالب ثلاثي",
-                                    color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onPrimaryContainer else Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 13.sp
-                                )
-                            }
+                            Text(
+                                text = "اسم الطالب ثلاثي",
+                                color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onPrimaryContainer else Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
+                        }
 
-                            // Student name boxes (Clickable for editing/deleting)
+                        // Month Headers row (Horizontally scrollable only)
+                        Row(
+                            modifier = Modifier
+                                .weight(1f)
+                                .horizontalScroll(horizontalScrollState)
+                        ) {
+                            for (monthIdx in 0..5) {
+                                val monthLabel = draftMonthHeaders[monthIdx] ?: "الشهر ${monthIdx + 1}"
+                                Box(
+                                    modifier = Modifier
+                                        .width(105.dp)
+                                        .height(50.dp)
+                                        .background(if (isSystemInDarkTheme()) MaterialTheme.colorScheme.secondaryContainer else MediumTeal)
+                                        .clickable {
+                                            editingMonthIndex = monthIdx
+                                            editingMonthCurrentValue = monthLabel
+                                        }
+                                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center,
+                                        modifier = Modifier.padding(horizontal = 2.dp)
+                                    ) {
+                                        Text(
+                                            text = monthLabel,
+                                            color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSecondaryContainer else Color.White,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.weight(1f),
+                                            textAlign = TextAlign.Center
+                                        )
+                                        Icon(
+                                            imageVector = Icons.Filled.Edit,
+                                            contentDescription = "تعديل الشهر",
+                                            tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else GoldAccent,
+                                            modifier = Modifier.size(11.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Bottom section: Student Names Column + Content Grid (scroll synchronized)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .padding(horizontal = 8.dp)
+                    ) {
+                        // Student Names Column (Vertically scrollable only)
+                        Column(
+                            modifier = Modifier
+                                .width(170.dp)
+                                .verticalScroll(verticalScrollState)
+                                .background(MaterialTheme.colorScheme.surface)
+                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                        ) {
                             filteredAndSortedStudents.forEachIndexed { sIdx, student ->
                                 Box(
                                     modifier = Modifier
@@ -1227,95 +1332,67 @@ fun StudentsTab(viewModel: QuranViewModel) {
                             }
                         }
 
-                        // 2. Month Columns (Wraps content, scrolled vertically by the parent Box)
-                        for (monthIdx in 0..5) {
-                            val monthLabel = draftMonthHeaders[monthIdx] ?: "الشهر ${monthIdx + 1}"
-                            Column(
-                                modifier = Modifier.width(105.dp)
+                        // Content cells (Both Vertically and Horizontally scrollable in sync)
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .verticalScroll(verticalScrollState)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .horizontalScroll(horizontalScrollState)
                             ) {
-                                // Month Header Button (Renamable)
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(50.dp)
-                                        .background(if (isSystemInDarkTheme()) MaterialTheme.colorScheme.secondaryContainer else MediumTeal)
-                                        .clickable {
-                                            editingMonthIndex = monthIdx
-                                            editingMonthCurrentValue = monthLabel
-                                        }
-                                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.Center,
-                                        modifier = Modifier.padding(horizontal = 2.dp)
+                                for (monthIdx in 0..5) {
+                                    Column(
+                                        modifier = Modifier.width(105.dp)
                                     ) {
-                                        Text(
-                                            text = monthLabel,
-                                            color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSecondaryContainer else Color.White,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 13.sp,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            modifier = Modifier.weight(1f),
-                                            textAlign = TextAlign.Center
-                                        )
-                                        Icon(
-                                            imageVector = Icons.Filled.Edit,
-                                            contentDescription = "تعديل الشهر",
-                                            tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else GoldAccent,
-                                            modifier = Modifier.size(11.dp)
-                                        )
-                                    }
-                                }
-
-                                // Payment Checkboxes for each student in this month
-                                filteredAndSortedStudents.forEachIndexed { sIdx, student ->
-                                    val isPaid = draftPayments[student.id to monthIdx] ?: false
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(65.dp)
-                                            .background(
-                                                if (sIdx % 2 == 0) {
-                                                    if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f) else LightTeal.copy(alpha = 0.1f)
-                                                } else {
-                                                    MaterialTheme.colorScheme.surface
-                                                }
-                                            )
-                                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        IconButton(
-                                            onClick = { viewModel.toggleDraftPayment(student.id, monthIdx) },
-                                            modifier = Modifier
-                                                .size(40.dp)
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .background(
+                                        filteredAndSortedStudents.forEachIndexed { sIdx, student ->
+                                            val isPaid = draftPayments[student.id to monthIdx] ?: false
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .height(65.dp)
+                                                    .background(
+                                                        if (sIdx % 2 == 0) {
+                                                            if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f) else LightTeal.copy(alpha = 0.1f)
+                                                        } else {
+                                                            MaterialTheme.colorScheme.surface
+                                                        }
+                                                    )
+                                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                IconButton(
+                                                    onClick = { viewModel.toggleDraftPayment(student.id, monthIdx) },
+                                                    modifier = Modifier
+                                                        .size(40.dp)
+                                                        .clip(RoundedCornerShape(8.dp))
+                                                    .background(
+                                                        if (isPaid) {
+                                                            GreenSuccess
+                                                        } else {
+                                                            if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surfaceVariant else LightTeal.copy(alpha = 0.5f)
+                                                        }
+                                                    )
+                                                    .border(
+                                                        1.dp,
+                                                        if (isPaid) {
+                                                            GreenSuccess
+                                                        } else {
+                                                            if (isSystemInDarkTheme()) MaterialTheme.colorScheme.outline else MediumTeal.copy(alpha = 0.5f)
+                                                        },
+                                                        RoundedCornerShape(8.dp)
+                                                    )
+                                                ) {
                                                     if (isPaid) {
-                                                        GreenSuccess
-                                                    } else {
-                                                        if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surfaceVariant else LightTeal.copy(alpha = 0.5f)
+                                                        Icon(
+                                                            imageVector = Icons.Filled.Check,
+                                                            contentDescription = "تم الدفع",
+                                                            tint = Color.White,
+                                                            modifier = Modifier.size(20.dp)
+                                                        )
                                                     }
-                                                )
-                                                .border(
-                                                    1.dp,
-                                                    if (isPaid) {
-                                                        GreenSuccess
-                                                    } else {
-                                                        if (isSystemInDarkTheme()) MaterialTheme.colorScheme.outline else MediumTeal.copy(alpha = 0.5f)
-                                                    },
-                                                    RoundedCornerShape(8.dp)
-                                                )
-                                        ) {
-                                            if (isPaid) {
-                                                Icon(
-                                                    imageVector = Icons.Filled.Check,
-                                                    contentDescription = "تم الدفع",
-                                                    tint = Color.White,
-                                                    modifier = Modifier.size(20.dp)
-                                                )
+                                                }
                                             }
                                         }
                                     }
