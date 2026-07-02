@@ -62,4 +62,19 @@ interface QuranDao {
 
     @Query("DELETE FROM payments WHERE studentId = :studentId")
     suspend fun deletePaymentsForStudent(studentId: Int)
+
+    @Query("DELETE FROM students")
+    suspend fun deleteAllStudents()
+
+    @Query("DELETE FROM hour_headers")
+    suspend fun deleteAllHourHeaders()
+
+    @Query("DELETE FROM appointment_cells")
+    suspend fun deleteAllAppointmentCells()
+
+    @Query("DELETE FROM month_headers")
+    suspend fun deleteAllMonthHeaders()
+
+    @Query("DELETE FROM payments")
+    suspend fun deleteAllPayments()
 }

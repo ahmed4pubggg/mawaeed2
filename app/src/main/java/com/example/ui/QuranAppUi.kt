@@ -53,6 +53,10 @@ import com.example.ui.theme.CyanSecondary
 import com.example.ui.theme.LightText
 import com.example.ui.theme.LightTextSecondary
 import kotlinx.coroutines.flow.collectLatest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.net.Uri
+import android.widget.Toast
 
 enum class StudentSortType {
     ALPHABETICAL,
@@ -681,7 +685,7 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "يوجد تعديلات غير محفوظة",
+                            text = "التعديلات غير مثبتة",
                             color = Color.Red,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
@@ -696,7 +700,7 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "جميع التغييرات مثبتة",
+                            text = "التعديلات مثبتة",
                             color = GreenSuccess,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
@@ -704,19 +708,41 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
                     }
                 }
 
-                 // Main Save (Tathbeet) button
-                 Row {
+                 // Save / Revert buttons
+                 Row(
+                     verticalAlignment = Alignment.CenterVertically,
+                     horizontalArrangement = Arrangement.spacedBy(8.dp)
+                 ) {
+                     if (hasUnsavedChanges) {
+                         OutlinedButton(
+                             onClick = { viewModel.revertAppointments() },
+                             colors = ButtonDefaults.outlinedButtonColors(
+                                 contentColor = if (isSystemInDarkTheme()) Color.White else DarkTeal
+                             ),
+                             border = BorderStroke(1.dp, if (isSystemInDarkTheme()) Color.White else DarkTeal),
+                             shape = RoundedCornerShape(10.dp),
+                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                             modifier = Modifier.height(38.dp)
+                         ) {
+                             Icon(Icons.Filled.Undo, contentDescription = "تراجع", modifier = Modifier.size(16.dp))
+                             Spacer(modifier = Modifier.width(4.dp))
+                             Text("تراجع", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                         }
+                     }
+
                      Button(
                          onClick = { viewModel.saveAppointments() },
                          colors = ButtonDefaults.buttonColors(
                              containerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
                              contentColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onPrimary else Color.White
                          ),
-                         shape = RoundedCornerShape(10.dp)
+                         shape = RoundedCornerShape(10.dp),
+                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                         modifier = Modifier.height(38.dp)
                      ) {
-                         Icon(Icons.Filled.Save, contentDescription = "تثبيت")
-                         Spacer(modifier = Modifier.width(6.dp))
-                         Text("تثبيت", fontWeight = FontWeight.Bold)
+                         Icon(Icons.Filled.Save, contentDescription = "تثبيت", modifier = Modifier.size(16.dp))
+                         Spacer(modifier = Modifier.width(4.dp))
+                         Text("تثبيت", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                      }
                  }
             }
@@ -947,45 +973,7 @@ fun StudentsTab(viewModel: QuranViewModel) {
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Options Panel: Add student + Save Payments
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Button(
-                    onClick = { isAddingStudent = true },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
-                        contentColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onPrimary else Color.White
-                    ),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Icon(Icons.Filled.Add, contentDescription = "إضافة طالب")
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("إضافة طالب جديد", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                }
-
-                // Quick Save for payments & months
-                Button(
-                    onClick = {
-                        confirmPasswordInput = ""
-                        confirmPasswordError = null
-                        isConfirmingPaymentsWithPassword = true
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.tertiary else DeepGold,
-                        contentColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onTertiary else Color.White
-                    ),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Icon(Icons.Filled.Save, contentDescription = "تثبيت الحسابات")
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("تثبيت الحسابات", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                }
-            }
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Search and Sort controls Card (Replaces help card - Requirement 7 & 8)
             Card(
@@ -1403,43 +1391,107 @@ fun StudentsTab(viewModel: QuranViewModel) {
                 }
             }
 
-            // Unsaved adjustments indicator row (Buttons removed - Requirement 2 & 6)
+            // Bottom Save, Revert, and Add Student Row
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center // Center-aligned for clean visual balance
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                if (hasUnsavedChanges) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .background(Color.Red, shape = CircleShape)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "تعديلات حسابية غير محفوظة",
-                            color = Color.Red,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                // Right side: + Add button & Status indicator
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Small compact "+ إضافة" button
+                    Button(
+                        onClick = { isAddingStudent = true },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                            contentColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onPrimary else Color.White
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                        modifier = Modifier.height(38.dp)
+                    ) {
+                        Icon(Icons.Filled.Add, contentDescription = "إضافة طالب", modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("+ إضافة", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
-                } else {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .background(if (isSystemInDarkTheme()) Color(0xFF4ADE80) else GreenSuccess, shape = CircleShape)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "جميع الاشتراكات مثبتة في النظام",
-                            color = if (isSystemInDarkTheme()) Color(0xFF4ADE80) else GreenSuccess,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+
+                    if (hasUnsavedChanges) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .background(Color.Red, shape = CircleShape)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "التعديلات غير مثبتة",
+                                color = Color.Red,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    } else {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .background(if (isSystemInDarkTheme()) Color(0xFF4ADE80) else GreenSuccess, shape = CircleShape)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "التعديلات مثبتة",
+                                color = if (isSystemInDarkTheme()) Color(0xFF4ADE80) else GreenSuccess,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+
+                // Left side: Revert & Commit buttons
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (hasUnsavedChanges) {
+                        OutlinedButton(
+                            onClick = { viewModel.revertNamesAndPayments() },
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = if (isSystemInDarkTheme()) Color.White else DarkTeal
+                            ),
+                            border = BorderStroke(1.dp, if (isSystemInDarkTheme()) Color.White else DarkTeal),
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                            modifier = Modifier.height(38.dp)
+                        ) {
+                            Icon(Icons.Filled.Undo, contentDescription = "تراجع", modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("تراجع", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        }
+                    }
+
+                    Button(
+                        onClick = {
+                            confirmPasswordInput = ""
+                            confirmPasswordError = null
+                            isConfirmingPaymentsWithPassword = true
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                            contentColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onPrimary else Color.White
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                        modifier = Modifier.height(38.dp)
+                    ) {
+                        Icon(Icons.Filled.Save, contentDescription = "تثبيت", modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("تثبيت", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
                 }
             }
@@ -1781,6 +1833,49 @@ fun StudentsTab(viewModel: QuranViewModel) {
 
 @Composable
 fun PasswordTab(viewModel: QuranViewModel) {
+    val context = LocalContext.current
+
+    // Launchers for Backup and Restore
+    val createBackupLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json")
+    ) { uri: Uri? ->
+        if (uri != null) {
+            try {
+                val jsonString = viewModel.getBackupJsonString()
+                context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                    outputStream.write(jsonString.toByteArray(Charsets.UTF_8))
+                }
+                Toast.makeText(context, "تم حفظ النسخة الاحتياطية بنجاح!", Toast.LENGTH_LONG).show()
+            } catch (e: Exception) {
+                Toast.makeText(context, "خطأ في حفظ النسخة الاحتياطية: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    val restoreBackupLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            try {
+                context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                    val bytes = inputStream.readBytes()
+                    val jsonString = String(bytes, Charsets.UTF_8)
+                    viewModel.importBackupJsonString(
+                        jsonString = jsonString,
+                        onSuccess = {
+                            Toast.makeText(context, "تم استعادة النسخة الاحتياطية بنجاح!", Toast.LENGTH_LONG).show()
+                        },
+                        onFailure = { errorMsg ->
+                            Toast.makeText(context, "خطأ في استعادة النسخة الاحتياطية: $errorMsg", Toast.LENGTH_LONG).show()
+                        }
+                    )
+                }
+            } catch (e: Exception) {
+                Toast.makeText(context, "خطأ في فتح الملف: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
     // Clear alerts when this tab is loaded
     DisposableEffect(Unit) {
         onDispose {
@@ -1941,6 +2036,92 @@ fun PasswordTab(viewModel: QuranViewModel) {
                             text = "تثبيت كلمة السر الجديدة",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                         )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Backup and Restore Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                shape = RoundedCornerShape(20.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .padding(20.dp)
+                        .fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Backup,
+                        contentDescription = "النسخ الاحتياطي",
+                        tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                        modifier = Modifier.size(48.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "النسخ الاحتياطي والاستعادة",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal
+                        )
+                    )
+
+                    Text(
+                        text = "احفظ نسخة من جدول المواعيد والأسماء والمدفوعات على هاتفك لاستعادتها في أي وقت عند حذف البرنامج أو تهيئة الجهاز.",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(top = 4.dp, bottom = 20.dp)
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        // Backup button (Export)
+                        Button(
+                            onClick = {
+                                createBackupLauncher.launch("quran_app_backup_${System.currentTimeMillis() / 1000}.json")
+                            },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                                contentColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onPrimary else Color.White
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(Icons.Filled.CloudUpload, contentDescription = "تصدير")
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("تصدير", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        }
+
+                        // Restore button (Import)
+                        OutlinedButton(
+                            onClick = {
+                                restoreBackupLauncher.launch(arrayOf("application/json", "application/octet-stream", "*/*"))
+                            },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = if (isSystemInDarkTheme()) Color.White else DarkTeal
+                            ),
+                            border = BorderStroke(1.dp, if (isSystemInDarkTheme()) Color.White else DarkTeal),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(Icons.Filled.CloudDownload, contentDescription = "استيراد")
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("استيراد", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        }
                     }
                 }
             }

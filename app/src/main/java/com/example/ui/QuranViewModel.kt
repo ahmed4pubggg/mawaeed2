@@ -352,4 +352,171 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+
+    fun revertAppointments() {
+        draftHourHeaders = hourHeaders.value.associate { it.hourIndex to it.name }
+        draftCells = appointmentCells.value.associate { (it.dayIndex to it.hourIndex) to it.content }
+        viewModelScope.launch {
+            _uiEvent.emit("تم التراجع عن تعديلات جدول المواعيد")
+        }
+    }
+
+    fun revertNamesAndPayments() {
+        draftMonthHeaders = monthHeaders.value.associate { it.monthIndex to it.name }
+        draftPayments = payments.value.associate { (it.studentId to it.monthIndex) to it.paid }
+        viewModelScope.launch {
+            _uiEvent.emit("تم التراجع عن تعديلات شؤون الطلاب والمدفوعات")
+        }
+    }
+
+    fun getBackupJsonString(): String {
+        val root = org.json.JSONObject()
+        root.put("backup_version", 1)
+
+        val studentsArray = org.json.JSONArray()
+        students.value.forEach {
+            val obj = org.json.JSONObject()
+            obj.put("id", it.id)
+            obj.put("fullName", it.fullName)
+            obj.put("lastModified", it.lastModified)
+            studentsArray.put(obj)
+        }
+        root.put("students", studentsArray)
+
+        val hourHeadersArray = org.json.JSONArray()
+        hourHeaders.value.forEach {
+            val obj = org.json.JSONObject()
+            obj.put("hourIndex", it.hourIndex)
+            obj.put("name", it.name)
+            hourHeadersArray.put(obj)
+        }
+        root.put("hour_headers", hourHeadersArray)
+
+        val monthHeadersArray = org.json.JSONArray()
+        monthHeaders.value.forEach {
+            val obj = org.json.JSONObject()
+            obj.put("monthIndex", it.monthIndex)
+            obj.put("name", it.name)
+            monthHeadersArray.put(obj)
+        }
+        root.put("month_headers", monthHeadersArray)
+
+        val appointmentCellsArray = org.json.JSONArray()
+        appointmentCells.value.forEach {
+            val obj = org.json.JSONObject()
+            obj.put("dayIndex", it.dayIndex)
+            obj.put("hourIndex", it.hourIndex)
+            obj.put("content", it.content)
+            appointmentCellsArray.put(obj)
+        }
+        root.put("appointment_cells", appointmentCellsArray)
+
+        val paymentsArray = org.json.JSONArray()
+        payments.value.forEach {
+            val obj = org.json.JSONObject()
+            obj.put("studentId", it.studentId)
+            obj.put("monthIndex", it.monthIndex)
+            obj.put("paid", it.paid)
+            paymentsArray.put(obj)
+        }
+        root.put("payments", paymentsArray)
+
+        return root.toString(2)
+    }
+
+    fun importBackupJsonString(jsonString: String, onSuccess: () -> Unit, onFailure: (String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val root = org.json.JSONObject(jsonString)
+                
+                val studentsList = mutableListOf<StudentEntity>()
+                if (root.has("students")) {
+                    val arr = root.getJSONArray("students")
+                    for (i in 0 until arr.length()) {
+                        val obj = arr.getJSONObject(i)
+                        studentsList.add(
+                            StudentEntity(
+                                id = obj.getInt("id"),
+                                fullName = obj.getString("fullName"),
+                                lastModified = obj.optLong("lastModified", System.currentTimeMillis())
+                            )
+                        )
+                    }
+                }
+
+                val hourHeadersList = mutableListOf<HourHeaderEntity>()
+                if (root.has("hour_headers")) {
+                    val arr = root.getJSONArray("hour_headers")
+                    for (i in 0 until arr.length()) {
+                        val obj = arr.getJSONObject(i)
+                        hourHeadersList.add(
+                            HourHeaderEntity(
+                                hourIndex = obj.getInt("hourIndex"),
+                                name = obj.getString("name")
+                            )
+                        )
+                    }
+                }
+
+                val monthHeadersList = mutableListOf<MonthHeaderEntity>()
+                if (root.has("month_headers")) {
+                    val arr = root.getJSONArray("month_headers")
+                    for (i in 0 until arr.length()) {
+                        val obj = arr.getJSONObject(i)
+                        monthHeadersList.add(
+                            MonthHeaderEntity(
+                                monthIndex = obj.getInt("monthIndex"),
+                                name = obj.getString("name")
+                            )
+                        )
+                    }
+                }
+
+                val appointmentCellsList = mutableListOf<AppointmentCellEntity>()
+                if (root.has("appointment_cells")) {
+                    val arr = root.getJSONArray("appointment_cells")
+                    for (i in 0 until arr.length()) {
+                        val obj = arr.getJSONObject(i)
+                        appointmentCellsList.add(
+                            AppointmentCellEntity(
+                                dayIndex = obj.getInt("dayIndex"),
+                                hourIndex = obj.getInt("hourIndex"),
+                                content = obj.getString("content")
+                            )
+                        )
+                    }
+                }
+
+                val paymentsList = mutableListOf<PaymentEntity>()
+                if (root.has("payments")) {
+                    val arr = root.getJSONArray("payments")
+                    for (i in 0 until arr.length()) {
+                        val obj = arr.getJSONObject(i)
+                        paymentsList.add(
+                            PaymentEntity(
+                                studentId = obj.getInt("studentId"),
+                                monthIndex = obj.getInt("monthIndex"),
+                                paid = obj.getBoolean("paid")
+                            )
+                        )
+                    }
+                }
+
+                repository.importBackup(
+                    studentsList,
+                    hourHeadersList,
+                    appointmentCellsList,
+                    monthHeadersList,
+                    paymentsList
+                )
+
+                // Resync drafts so the UI updates immediately
+                syncDraftsFromDb()
+                _uiEvent.emit("تم استيراد البيانات بنجاح!")
+                onSuccess()
+            } catch (e: Exception) {
+                onFailure(e.localizedMessage ?: "خطأ غير معروف في قراءة ملف النسخة الاحتياطية")
+            }
+        }
+    }
 }

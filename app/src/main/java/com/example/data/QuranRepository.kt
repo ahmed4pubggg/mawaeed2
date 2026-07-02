@@ -84,4 +84,34 @@ class QuranRepository(private val dao: QuranDao) {
             dao.saveMonthHeaders(entities)
         }
     }
+
+    suspend fun importBackup(
+        studentsList: List<StudentEntity>,
+        hourHeadersList: List<HourHeaderEntity>,
+        appointmentCellsList: List<AppointmentCellEntity>,
+        monthHeadersList: List<MonthHeaderEntity>,
+        paymentsList: List<PaymentEntity>
+    ) {
+        dao.deleteAllStudents()
+        dao.deleteAllHourHeaders()
+        dao.deleteAllAppointmentCells()
+        dao.deleteAllMonthHeaders()
+        dao.deleteAllPayments()
+
+        if (studentsList.isNotEmpty()) {
+            studentsList.forEach { dao.saveStudent(it) }
+        }
+        if (hourHeadersList.isNotEmpty()) {
+            dao.saveHourHeaders(hourHeadersList)
+        }
+        if (appointmentCellsList.isNotEmpty()) {
+            dao.saveAppointmentCells(appointmentCellsList)
+        }
+        if (monthHeadersList.isNotEmpty()) {
+            dao.saveMonthHeaders(monthHeadersList)
+        }
+        if (paymentsList.isNotEmpty()) {
+            dao.savePayments(paymentsList)
+        }
+    }
 }
