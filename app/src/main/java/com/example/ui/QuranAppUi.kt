@@ -2912,20 +2912,6 @@ fun ComposeTimePickerDialog(
                     )
                 }
                 
-                // Dial Clock
-                AnalogClockPicker(
-                    hour12 = hour12,
-                    minute = minute,
-                    isAm = isAm,
-                    onTimeChange = { h, m ->
-                        hour12 = h
-                        minute = m
-                    },
-                    hourColor = hourColor,
-                    minuteColor = minuteColor,
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
-                
                 // Dialog Actions (Buttons)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -2994,38 +2980,16 @@ fun WheelPicker(
     LaunchedEffect(lazyListState) {
         snapshotFlow { lazyListState.firstVisibleItemIndex }
             .collect { firstIndex ->
-                if (lazyListState.isScrollInProgress) {
-                    val centerIndex = firstIndex + 1
-                    val mappedIndex = centerIndex % rangeSize
-                    val selectedVal = rangeList[mappedIndex]
-                    if (selectedVal != value) {
-                        onValueChange(selectedVal)
-                        try {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        } catch (e: Exception) {}
-                    }
+                val centerIndex = firstIndex + 1
+                val mappedIndex = centerIndex % rangeSize
+                val selectedVal = rangeList[mappedIndex]
+                if (selectedVal != value) {
+                    onValueChange(selectedVal)
+                    try {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    } catch (e: Exception) {}
                 }
             }
-    }
-    
-    LaunchedEffect(value) {
-        if (!lazyListState.isScrollInProgress) {
-            val currentFirstIndex = lazyListState.firstVisibleItemIndex
-            val currentCenterIndex = currentFirstIndex + 1
-            val currentMappedIndex = currentCenterIndex % rangeSize
-            val currentSelectedVal = rangeList[currentMappedIndex]
-            
-            if (currentSelectedVal != value) {
-                val diff = rangeList.indexOf(value) - currentMappedIndex
-                val shortestDiff = when {
-                    diff > rangeSize / 2 -> diff - rangeSize
-                    diff < -rangeSize / 2 -> diff + rangeSize
-                    else -> diff
-                }
-                val targetIndex = currentFirstIndex + shortestDiff
-                lazyListState.scrollToItem(targetIndex)
-            }
-        }
     }
     
     Box(
@@ -3103,36 +3067,16 @@ fun SwipePeriodPicker(
     LaunchedEffect(lazyListState) {
         snapshotFlow { lazyListState.firstVisibleItemIndex }
             .collect { firstIndex ->
-                if (lazyListState.isScrollInProgress) {
-                    val centerIndex = firstIndex + 1
-                    val mappedIndex = centerIndex % 2
-                    val selectedAm = mappedIndex == 1
-                    if (selectedAm != isAm) {
-                        onValueChange(selectedAm)
-                        try {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        } catch (e: Exception) {}
-                    }
+                val centerIndex = firstIndex + 1
+                val mappedIndex = centerIndex % 2
+                val selectedAm = mappedIndex == 1
+                if (selectedAm != isAm) {
+                    onValueChange(selectedAm)
+                    try {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    } catch (e: Exception) {}
                 }
             }
-    }
-    
-    LaunchedEffect(isAm) {
-        if (!lazyListState.isScrollInProgress) {
-            val currentFirstIndex = lazyListState.firstVisibleItemIndex
-            val currentCenterIndex = currentFirstIndex + 1
-            val currentMappedIndex = currentCenterIndex % 2
-            val currentSelectedAm = currentMappedIndex == 1
-            
-            if (currentSelectedAm != isAm) {
-                val targetIndex = if (isAm) {
-                    if (currentMappedIndex == 0) currentFirstIndex + 1 else currentFirstIndex - 1
-                } else {
-                    if (currentMappedIndex == 1) currentFirstIndex + 1 else currentFirstIndex - 1
-                }
-                lazyListState.scrollToItem(targetIndex)
-            }
-        }
     }
     
     Box(

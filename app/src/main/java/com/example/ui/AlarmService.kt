@@ -36,8 +36,9 @@ class AlarmService : Service() {
         // Acquire WakeLock
         try {
             val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+            @Suppress("DEPRECATION")
             wakeLock = powerManager.newWakeLock(
-                PowerManager.PARTIAL_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
+                PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP or PowerManager.ON_AFTER_RELEASE,
                 "QuranApp::AlarmServiceWakeLock"
             )
             wakeLock?.acquire(10 * 60 * 1000L /* 10 minutes max */)
@@ -125,7 +126,7 @@ class AlarmService : Service() {
             .setFullScreenIntent(pendingIntent, true)
             .setContentIntent(pendingIntent)
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, "إيقاف", stopPendingIntent)
-            .addAction(android.R.drawable.ic_popup_sync, "غفوة (10 د)", snoozePendingIntent)
+            .addAction(android.R.drawable.ic_popup_sync, "تأجيل (10 د)", snoozePendingIntent)
             .build()
 
         startForeground(999, notification)
@@ -218,7 +219,7 @@ class AlarmService : Service() {
         }
 
         val intent = Intent(context, AlarmReceiver::class.java).apply {
-            putExtra("appointment_text", "$appointmentText (غفوة)")
+            putExtra("appointment_text", "$appointmentText (تأجيل)")
             putExtra("appointment_day", appointmentDay)
             putExtra("appointment_time", appointmentTime)
             putExtra("ringtone_uri", ringtoneUri)

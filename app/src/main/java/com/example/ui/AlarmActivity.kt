@@ -117,6 +117,27 @@ fun AlarmScreen(
         label = "pulseScale"
     )
 
+    val formattedTime = remember(time) {
+        try {
+            val parts = time.split(":")
+            if (parts.size == 2) {
+                val h = parts[0].toIntOrNull() ?: 12
+                val m = parts[1].toIntOrNull() ?: 0
+                val amPm = if (h >= 12) "م" else "ص"
+                val h12 = when {
+                    h == 0 -> 12
+                    h > 12 -> h - 12
+                    else -> h
+                }
+                String.format("%d:%02d %s", h12, m, amPm)
+            } else {
+                time
+            }
+        } catch (e: Exception) {
+            time
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -191,7 +212,7 @@ fun AlarmScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "يوم $day • الساعة $time",
+                        text = "يوم $day • الساعة $formattedTime",
                         style = MaterialTheme.typography.titleMedium.copy(
                             color = GoldAccent,
                             fontWeight = FontWeight.Bold
@@ -251,13 +272,26 @@ fun AlarmScreen(
                     .height(58.dp)
             ) {
                 Text(
-                    text = "غَفْوَة (10 دَقَائِق)",
+                    text = "تَأْجِيل (10 دَقَائِق)",
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.sp
                     )
                 )
             }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Rights Credit Label
+            Text(
+                text = "بواسطة الشيخ أحمد النمس غفر الله له",
+                style = MaterialTheme.typography.bodySmall.copy(
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.5.sp
+                ),
+                textAlign = TextAlign.Center
+            )
         }
     }
 }
