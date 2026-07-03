@@ -27,6 +27,9 @@ interface QuranDao {
     @Query("SELECT * FROM appointment_cells")
     fun getAppointmentCells(): Flow<List<AppointmentCellEntity>>
 
+    @Query("SELECT * FROM appointment_cells")
+    suspend fun getAppointmentCellsList(): List<AppointmentCellEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun saveAppointmentCells(cells: List<AppointmentCellEntity>)
 

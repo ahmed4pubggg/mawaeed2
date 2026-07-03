@@ -30,6 +30,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.TextStyle
@@ -901,11 +907,16 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
 
         // 1. Edit Header (Hour Label) Dialog
         editingHeaderIndex?.let { index ->
-            Dialog(onDismissRequest = { editingHeaderIndex = null }) {
+            Dialog(
+                onDismissRequest = { editingHeaderIndex = null },
+                properties = DialogProperties(usePlatformDefaultWidth = false)
+            ) {
                 Card(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                        .fillMaxWidth(0.9f)
+                        .wrapContentHeight()
+                        .padding(16.dp)
+                        .imePadding(),
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     Column(
@@ -970,14 +981,19 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
             val dayName = WEEK_DAYS[dayIdx]
             val hourName = draftHourHeaders[hourIdx] ?: "${hourIdx + 12}"
 
-            Dialog(onDismissRequest = {
-                editingCellDayIdx = null
-                editingCellHourIdx = null
-            }) {
+            Dialog(
+                onDismissRequest = {
+                    editingCellDayIdx = null
+                    editingCellHourIdx = null
+                },
+                properties = DialogProperties(usePlatformDefaultWidth = false)
+            ) {
                 Card(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                        .fillMaxWidth(0.9f)
+                        .wrapContentHeight()
+                        .padding(16.dp)
+                        .imePadding(),
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     Column(
@@ -1655,11 +1671,16 @@ fun StudentsTab(viewModel: QuranViewModel) {
 
         // 1. Add Student Dialog
         if (isAddingStudent) {
-            Dialog(onDismissRequest = { isAddingStudent = false }) {
+            Dialog(
+                onDismissRequest = { isAddingStudent = false },
+                properties = DialogProperties(usePlatformDefaultWidth = false)
+            ) {
                 Card(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                        .fillMaxWidth(0.9f)
+                        .wrapContentHeight()
+                        .padding(16.dp)
+                        .imePadding(),
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     Column(
@@ -1874,11 +1895,16 @@ fun StudentsTab(viewModel: QuranViewModel) {
 
         // 4. Confirm Payments with Password Dialog
         if (isConfirmingPaymentsWithPassword) {
-            Dialog(onDismissRequest = { isConfirmingPaymentsWithPassword = false }) {
+            Dialog(
+                onDismissRequest = { isConfirmingPaymentsWithPassword = false },
+                properties = DialogProperties(usePlatformDefaultWidth = false)
+            ) {
                 Card(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                        .fillMaxWidth(0.9f)
+                        .wrapContentHeight()
+                        .padding(16.dp)
+                        .imePadding(),
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     Column(
@@ -2796,11 +2822,16 @@ fun ComposeTimePickerDialog(
     // AM/PM Color: Warm/Contrast Mint
     val periodColor = if (isDark) MintGreen80 else DarkTeal
     
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
         Card(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+                .fillMaxWidth(0.9f)
+                .wrapContentHeight()
+                .padding(16.dp)
+                .imePadding(),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
                 containerColor = if (isDark) PineSurface else Color.White
@@ -2838,7 +2869,7 @@ fun ComposeTimePickerDialog(
                     Spacer(modifier = Modifier.width(16.dp))
                     
                     // Minutes Picker
-                    SwipeWheelPicker(
+                    WheelPicker(
                         value = minute,
                         range = 0..59,
                         onValueChange = { minute = it },
@@ -2855,7 +2886,7 @@ fun ComposeTimePickerDialog(
                     )
                     
                     // Hours Picker
-                    SwipeWheelPicker(
+                    WheelPicker(
                         value = hour12,
                         range = 1..12,
                         onValueChange = { hour12 = it },
@@ -2924,7 +2955,7 @@ fun ComposeTimePickerDialog(
 }
 
 @Composable
-fun SwipeWheelPicker(
+fun WheelPicker(
     value: Int,
     range: IntRange,
     onValueChange: (Int) -> Unit,
@@ -2932,78 +2963,101 @@ fun SwipeWheelPicker(
     labelFormatter: (Int) -> String = { String.format("%02d", it) },
     modifier: Modifier = Modifier
 ) {
-    var dragAccumulator by remember { mutableStateOf(0f) }
+    val haptic = LocalHapticFeedback.current
+    val rangeList = range.toList()
+    val rangeSize = rangeList.size
+    val virtualCount = Int.MAX_VALUE
+    val middleOffset = virtualCount / 2
+    val startPosition = middleOffset - (middleOffset % rangeSize) + rangeList.indexOf(value)
     
-    val prevValue = if (value == range.first) range.last else value - 1
-    val nextValue = if (value == range.last) range.first else value + 1
+    val lazyListState = rememberLazyListState(initialFirstVisibleItemIndex = startPosition)
+    val snapFlingBehavior = rememberSnapFlingBehavior(lazyListState)
+    val itemHeight = 45.dp
     
-    Column(
-        modifier = modifier
-            .width(60.dp)
-            .height(130.dp)
-            .pointerInput(Unit) {
-                detectVerticalDragGestures(
-                    onDragStart = { dragAccumulator = 0f },
-                    onDragEnd = { dragAccumulator = 0f },
-                    onDragCancel = { dragAccumulator = 0f },
-                    onVerticalDrag = { change, dragAmount ->
-                        change.consume()
-                        dragAccumulator += dragAmount
-                        val threshold = 35f
-                        if (dragAccumulator > threshold) {
-                            val newVal = if (value == range.first) range.last else value - 1
-                            onValueChange(newVal)
-                            dragAccumulator = 0f
-                        } else if (dragAccumulator < -threshold) {
-                            val newVal = if (value == range.last) range.first else value + 1
-                            onValueChange(newVal)
-                            dragAccumulator = 0f
-                        }
-                    }
-                )
-            },
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = labelFormatter(prevValue),
-            color = color.copy(alpha = 0.35f),
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Normal,
-            modifier = Modifier.clickable { onValueChange(prevValue) }
-        )
+    LaunchedEffect(lazyListState) {
+        snapshotFlow { lazyListState.firstVisibleItemIndex }
+            .collect { firstIndex ->
+                val centerIndex = firstIndex + 1
+                val mappedIndex = centerIndex % rangeSize
+                val selectedVal = rangeList[mappedIndex]
+                if (selectedVal != value) {
+                    onValueChange(selectedVal)
+                    try {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    } catch (e: Exception) {}
+                }
+            }
+    }
+    
+    LaunchedEffect(value) {
+        val currentFirstIndex = lazyListState.firstVisibleItemIndex
+        val currentCenterIndex = currentFirstIndex + 1
+        val currentMappedIndex = currentCenterIndex % rangeSize
+        val currentSelectedVal = rangeList[currentMappedIndex]
         
+        if (currentSelectedVal != value) {
+            val diff = rangeList.indexOf(value) - currentMappedIndex
+            val shortestDiff = when {
+                diff > rangeSize / 2 -> diff - rangeSize
+                diff < -rangeSize / 2 -> diff + rangeSize
+                else -> diff
+            }
+            val targetIndex = currentFirstIndex + shortestDiff
+            lazyListState.animateScrollToItem(targetIndex)
+        }
+    }
+    
+    Box(
+        modifier = modifier
+            .width(70.dp)
+            .height(itemHeight * 3),
+        contentAlignment = Alignment.Center
+    ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 4.dp)
+                .height(itemHeight)
                 .background(
-                    color = color.copy(alpha = 0.1f),
-                    shape = RoundedCornerShape(8.dp)
+                    color = color.copy(alpha = 0.08f),
+                    shape = RoundedCornerShape(10.dp)
                 )
                 .border(
                     width = 1.dp,
-                    color = color.copy(alpha = 0.4f),
-                    shape = RoundedCornerShape(8.dp)
+                    color = color.copy(alpha = 0.3f),
+                    shape = RoundedCornerShape(10.dp)
                 )
-                .padding(vertical = 8.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = labelFormatter(value),
-                color = color,
-                fontSize = 28.sp,
-                fontWeight = FontWeight.ExtraBold
-            )
-        }
-        
-        Text(
-            text = labelFormatter(nextValue),
-            color = color.copy(alpha = 0.35f),
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Normal,
-            modifier = Modifier.clickable { onValueChange(nextValue) }
         )
+        
+        LazyColumn(
+            state = lazyListState,
+            flingBehavior = snapFlingBehavior,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(vertical = 0.dp)
+        ) {
+            items(
+                count = virtualCount,
+                key = { it }
+            ) { globalIndex ->
+                val localIndex = globalIndex % rangeSize
+                val itemVal = rangeList[localIndex]
+                val isSelected = itemVal == value
+                
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(itemHeight),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = labelFormatter(itemVal),
+                        color = if (isSelected) color else color.copy(alpha = 0.35f),
+                        fontSize = if (isSelected) 24.sp else 16.sp,
+                        fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Normal,
+                        style = TextStyle(textAlign = TextAlign.Center)
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -3014,73 +3068,99 @@ fun SwipePeriodPicker(
     color: Color,
     modifier: Modifier = Modifier
 ) {
-    var dragAccumulator by remember { mutableStateOf(0f) }
+    val haptic = LocalHapticFeedback.current
+    val options = listOf("م", "ص")
+    val selectedIndex = if (isAm) 1 else 0
+    val virtualCount = Int.MAX_VALUE
+    val middleOffset = virtualCount / 2
+    val startPosition = middleOffset - (middleOffset % 2) + selectedIndex
     
-    val valueStr = if (isAm) "ص" else "م"
-    val otherStr = if (isAm) "م" else "ص"
+    val lazyListState = rememberLazyListState(initialFirstVisibleItemIndex = startPosition)
+    val snapFlingBehavior = rememberSnapFlingBehavior(lazyListState)
+    val itemHeight = 45.dp
     
-    Column(
+    LaunchedEffect(lazyListState) {
+        snapshotFlow { lazyListState.firstVisibleItemIndex }
+            .collect { firstIndex ->
+                val centerIndex = firstIndex + 1
+                val mappedIndex = centerIndex % 2
+                val selectedAm = mappedIndex == 1
+                if (selectedAm != isAm) {
+                    onValueChange(selectedAm)
+                    try {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    } catch (e: Exception) {}
+                }
+            }
+    }
+    
+    LaunchedEffect(isAm) {
+        val currentFirstIndex = lazyListState.firstVisibleItemIndex
+        val currentCenterIndex = currentFirstIndex + 1
+        val currentMappedIndex = currentCenterIndex % 2
+        val currentSelectedAm = currentMappedIndex == 1
+        
+        if (currentSelectedAm != isAm) {
+            val targetIndex = if (isAm) {
+                if (currentMappedIndex == 0) currentFirstIndex + 1 else currentFirstIndex - 1
+            } else {
+                if (currentMappedIndex == 1) currentFirstIndex + 1 else currentFirstIndex - 1
+            }
+            lazyListState.animateScrollToItem(targetIndex)
+        }
+    }
+    
+    Box(
         modifier = modifier
             .width(60.dp)
-            .height(130.dp)
-            .pointerInput(Unit) {
-                detectVerticalDragGestures(
-                    onDragStart = { dragAccumulator = 0f },
-                    onDragEnd = { dragAccumulator = 0f },
-                    onDragCancel = { dragAccumulator = 0f },
-                    onVerticalDrag = { change, dragAmount ->
-                        change.consume()
-                        dragAccumulator += dragAmount
-                        val threshold = 35f
-                        if (dragAccumulator > threshold || dragAccumulator < -threshold) {
-                            onValueChange(!isAm)
-                            dragAccumulator = 0f
-                        }
-                    }
-                )
-            },
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween
+            .height(itemHeight * 3),
+        contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = otherStr,
-            color = color.copy(alpha = 0.35f),
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Normal,
-            modifier = Modifier.clickable { onValueChange(!isAm) }
-        )
-        
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 4.dp)
+                .height(itemHeight)
                 .background(
-                    color = color.copy(alpha = 0.1f),
-                    shape = RoundedCornerShape(8.dp)
+                    color = color.copy(alpha = 0.08f),
+                    shape = RoundedCornerShape(10.dp)
                 )
                 .border(
                     width = 1.dp,
-                    color = color.copy(alpha = 0.4f),
-                    shape = RoundedCornerShape(8.dp)
+                    color = color.copy(alpha = 0.3f),
+                    shape = RoundedCornerShape(10.dp)
                 )
-                .padding(vertical = 8.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = valueStr,
-                color = color,
-                fontSize = 28.sp,
-                fontWeight = FontWeight.ExtraBold
-            )
-        }
-        
-        Text(
-            text = otherStr,
-            color = color.copy(alpha = 0.35f),
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Normal,
-            modifier = Modifier.clickable { onValueChange(!isAm) }
         )
+        
+        LazyColumn(
+            state = lazyListState,
+            flingBehavior = snapFlingBehavior,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            items(
+                count = virtualCount,
+                key = { it }
+            ) { globalIndex ->
+                val localIndex = globalIndex % 2
+                val itemVal = options[localIndex]
+                val itemAm = localIndex == 1
+                val isSelected = itemAm == isAm
+                
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(itemHeight),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = itemVal,
+                        color = if (isSelected) color else color.copy(alpha = 0.35f),
+                        fontSize = if (isSelected) 24.sp else 16.sp,
+                        fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Normal,
+                        style = TextStyle(textAlign = TextAlign.Center)
+                    )
+                }
+            }
+        }
     }
 }
 

@@ -151,7 +151,13 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
                     if (draftCells.isEmpty() && list.isNotEmpty()) {
                         draftCells = list.associate { (it.dayIndex to it.hourIndex) to it.content }
                         if (alarmEnabled) {
-                            scheduleAlarms(getApplication())
+                            AlarmScheduler.scheduleAlarms(
+                                getApplication(),
+                                alarmEnabled,
+                                alarmTimes,
+                                alarmRingtoneUri ?: "",
+                                list
+                            )
                         }
                     }
                 }
@@ -247,7 +253,13 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
 
                 // Re-schedule alarms with the new saved cells
                 if (alarmEnabled) {
-                    scheduleAlarms(getApplication())
+                    AlarmScheduler.scheduleAlarms(
+                        getApplication(),
+                        alarmEnabled,
+                        alarmTimes,
+                        alarmRingtoneUri ?: "",
+                        cellEntities
+                    )
                 }
             } catch (e: Exception) {
                 _uiEvent.emit("حدث خطأ أثناء حفظ المواعيد: ${e.localizedMessage}")
@@ -644,11 +656,8 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
         alarmEnabled = enabled
         viewModelScope.launch {
             repository.saveConfig("alarm_enabled", enabled.toString())
-            if (enabled) {
-                scheduleAlarms(context)
-            } else {
-                cancelAllAlarms(context)
-            }
+            val savedCells = repository.getAppointmentCellsList()
+            AlarmScheduler.scheduleAlarms(context, enabled, alarmTimes, alarmRingtoneUri ?: "", savedCells)
         }
     }
 
@@ -656,9 +665,8 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
         alarmRingtoneUri = uri
         viewModelScope.launch {
             repository.saveConfig("alarm_ringtone_uri", uri)
-            if (alarmEnabled) {
-                scheduleAlarms(context)
-            }
+            val savedCells = repository.getAppointmentCellsList()
+            AlarmScheduler.scheduleAlarms(context, alarmEnabled, alarmTimes, uri, savedCells)
         }
     }
 
@@ -668,114 +676,8 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
         alarmTimes = updatedMap
         viewModelScope.launch {
             repository.saveConfig("alarm_time_$hourIndex", timeStr)
-            if (alarmEnabled) {
-                scheduleAlarms(context)
-            }
+            val savedCells = repository.getAppointmentCellsList()
+            AlarmScheduler.scheduleAlarms(context, alarmEnabled, updatedMap, alarmRingtoneUri ?: "", savedCells)
         }
     }
-
-    fun scheduleAlarms(context: Context) {
-        cancelAllAlarms(context)
-        if (!alarmEnabled) return
-
-        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-
-        for (d in 0..6) {
-            for (h in 0..7) {
-                val cellContent = draftCells[d to h] ?: ""
-                if (cellContent.trim().isNotEmpty()) {
-                    val timeStr = alarmTimes[h] ?: "12:00"
-                    val parts = timeStr.split(":")
-                    if (parts.size == 2) {
-                        val alarmHour = parts[0].toIntOrNull() ?: 12
-                        val alarmMinute = parts[1].toIntOrNull() ?: 0
-
-                        val calendar = java.util.Calendar.getInstance().apply {
-                            set(java.util.Calendar.DAY_OF_WEEK, mapDayIndexToCalendar(d))
-                            set(java.util.Calendar.HOUR_OF_DAY, alarmHour)
-                            set(java.util.Calendar.MINUTE, alarmMinute)
-                            set(java.util.Calendar.SECOND, 0)
-                            set(java.util.Calendar.MILLISECOND, 0)
-
-                            if (timeInMillis <= System.currentTimeMillis()) {
-                                add(java.util.Calendar.WEEK_OF_YEAR, 1)
-                            }
-                        }
-
-                        val requestCode = d * 100 + h
-                        val intent = Intent(context, com.example.ui.AlarmReceiver::class.java).apply {
-                            putExtra("appointment_text", cellContent)
-                            putExtra("appointment_day", WEEK_DAYS[d])
-                            putExtra("appointment_time", timeStr)
-                            putExtra("ringtone_uri", alarmRingtoneUri ?: "")
-                        }
-
-                        val pendingIntent = PendingIntent.getBroadcast(
-                            context,
-                            requestCode,
-                            intent,
-                            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                        )
-
-                        try {
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                                alarmManager.setExactAndAllowWhileIdle(
-                                    AlarmManager.RTC_WAKEUP,
-                                    calendar.timeInMillis,
-                                    pendingIntent
-                                )
-                            } else {
-                                alarmManager.setExact(
-                                    AlarmManager.RTC_WAKEUP,
-                                    calendar.timeInMillis,
-                                    pendingIntent
-                                )
-                            }
-                        } catch (e: SecurityException) {
-                            alarmManager.setAndAllowWhileIdle(
-                                AlarmManager.RTC_WAKEUP,
-                                calendar.timeInMillis,
-                                pendingIntent
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    fun cancelAllAlarms(context: Context) {
-        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        for (d in 0..6) {
-            for (h in 0..7) {
-                val requestCode = d * 100 + h
-                val intent = Intent(context, com.example.ui.AlarmReceiver::class.java)
-                val pendingIntent = PendingIntent.getBroadcast(
-                    context,
-                    requestCode,
-                    intent,
-                    PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
-                )
-                if (pendingIntent != null) {
-                    alarmManager.cancel(pendingIntent)
-                    pendingIntent.cancel()
-                }
-            }
-        }
-    }
-
-    private fun mapDayIndexToCalendar(dayIndex: Int): Int {
-        return when (dayIndex) {
-            0 -> java.util.Calendar.SATURDAY
-            1 -> java.util.Calendar.SUNDAY
-            2 -> java.util.Calendar.MONDAY
-            3 -> java.util.Calendar.TUESDAY
-            4 -> java.util.Calendar.WEDNESDAY
-            5 -> java.util.Calendar.THURSDAY
-            6 -> java.util.Calendar.FRIDAY
-            else -> java.util.Calendar.SATURDAY
-        }
-    }
-
-    private val WEEK_DAYS = listOf("السبت", "الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة")
 }

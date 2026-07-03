@@ -31,6 +31,10 @@ class QuranRepository(private val dao: QuranDao) {
     // Appointment Cells
     val appointmentCells: Flow<List<AppointmentCellEntity>> = dao.getAppointmentCells()
 
+    suspend fun getAppointmentCellsList(): List<AppointmentCellEntity> {
+        return dao.getAppointmentCellsList()
+    }
+
     suspend fun saveAppointmentCells(cells: List<AppointmentCellEntity>) {
         dao.saveAppointmentCells(cells)
     }

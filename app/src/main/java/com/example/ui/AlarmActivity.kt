@@ -1,19 +1,14 @@
 package com.example.ui
 
 import android.content.Context
-import android.media.AudioAttributes
-import android.media.MediaPlayer
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.os.VibrationEffect
-import android.os.Vibrator
-import android.os.VibratorManager
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -24,7 +19,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -39,9 +33,6 @@ import com.example.ui.theme.MediumTeal
 import com.example.ui.theme.MyApplicationTheme
 
 class AlarmActivity : ComponentActivity() {
-
-    private var mediaPlayer: MediaPlayer? = null
-    private var vibrator: Vibrator? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Show over lockscreen and wake screen up
@@ -71,9 +62,6 @@ class AlarmActivity : ComponentActivity() {
         val appointmentTime = intent.getStringExtra("appointment_time") ?: ""
         val ringtoneUri = intent.getStringExtra("ringtone_uri") ?: ""
 
-        // Start playing ringtone and vibration
-        startAlarm(ringtoneUri)
-
         setContent {
             MyApplicationTheme {
                 AlarmScreen(
@@ -81,7 +69,17 @@ class AlarmActivity : ComponentActivity() {
                     day = appointmentDay,
                     time = appointmentTime,
                     onStop = {
-                        stopAlarm()
+                        AlarmService.activeService?.stopAlarmService()
+                        finish()
+                    },
+                    onSnooze = {
+                        AlarmService.activeService?.snoozeAlarmService(
+                            this@AlarmActivity,
+                            appointmentText,
+                            appointmentDay,
+                            appointmentTime,
+                            ringtoneUri
+                        )
                         finish()
                     }
                 )
@@ -89,99 +87,13 @@ class AlarmActivity : ComponentActivity() {
         }
     }
 
-    private fun startAlarm(uriStr: String) {
-        // Vibrator setup
-        vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val vibratorManager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
-            vibratorManager.defaultVibrator
-        } else {
-            @Suppress("DEPRECATION")
-            getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-        }
-
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                vibrator?.vibrate(
-                    VibrationEffect.createWaveform(
-                        longArrayOf(0, 500, 500),
-                        0 // Loop from index 0
-                    )
-                )
-            } else {
-                @Suppress("DEPRECATION")
-                vibrator?.vibrate(longArrayOf(0, 500, 500), 0)
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-
-        // Media player setup
-        try {
-            val uri = if (uriStr.isNotEmpty()) Uri.parse(uriStr) else null
-            mediaPlayer = MediaPlayer().apply {
-                if (uri != null) {
-                    setDataSource(this@AlarmActivity, uri)
-                } else {
-                    // Fallback to default alarm ringtone
-                    val defaultUri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_ALARM)
-                        ?: android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_RINGTONE)
-                    setDataSource(this@AlarmActivity, defaultUri)
-                }
-                setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_ALARM)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                        .build()
-                )
-                isLooping = true
-                prepare()
-                start()
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            // Ultimate fallback to standard notification sound
-            try {
-                mediaPlayer = MediaPlayer.create(
-                    this,
-                    android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION)
-                ).apply {
-                    isLooping = true
-                    start()
-                }
-            } catch (ex: Exception) {
-                ex.printStackTrace()
-            }
-        }
-    }
-
-    private fun stopAlarm() {
-        try {
-            mediaPlayer?.stop()
-            mediaPlayer?.release()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        } finally {
-            mediaPlayer = null
-        }
-
-        try {
-            vibrator?.cancel()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        } finally {
-            vibrator = null
-        }
-    }
-
     override fun onDestroy() {
-        stopAlarm()
         super.onDestroy()
     }
 
     override fun onBackPressed() {
-        // Clicking back also stops the alarm and closes it
-        stopAlarm()
-        @Suppress("DEPRECATION")
+        // Clicking back stops the alarm service and closes it
+        AlarmService.activeService?.stopAlarmService()
         super.onBackPressed()
     }
 }
@@ -191,7 +103,8 @@ fun AlarmScreen(
     text: String,
     day: String,
     time: String,
-    onStop: () -> Unit
+    onStop: () -> Unit,
+    onSnooze: () -> Unit
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val scale by infiniteTransition.animateFloat(
@@ -228,14 +141,14 @@ fun AlarmScreen(
             // Alarm icon container with pulsing gold aura
             Box(
                 modifier = Modifier
-                    .size(140.dp)
+                    .size(130.dp)
                     .scale(scale)
                     .background(GoldAccent.copy(alpha = 0.25f), shape = CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Box(
                     modifier = Modifier
-                        .size(100.dp)
+                        .size(90.dp)
                         .background(GoldAccent, shape = CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
@@ -243,12 +156,12 @@ fun AlarmScreen(
                         imageVector = Icons.Filled.Alarm,
                         contentDescription = "المنبه",
                         tint = DarkTeal,
-                        modifier = Modifier.size(54.dp)
+                        modifier = Modifier.size(48.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(28.dp))
 
             Text(
                 text = "تَنْبِيه مَوْعِد الحِصَّة",
@@ -299,9 +212,9 @@ fun AlarmScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(40.dp))
 
-            // Large dismiss Button
+            // Dismiss Button
             Button(
                 onClick = onStop,
                 colors = ButtonDefaults.buttonColors(
@@ -312,12 +225,35 @@ fun AlarmScreen(
                 shape = RoundedCornerShape(20.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(64.dp)
+                    .height(58.dp)
             ) {
                 Text(
                     text = "إِيقَاف التَّنْبِيه",
-                    style = MaterialTheme.typography.titleLarge.copy(
+                    style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = 1.sp
+                    )
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Snooze Button
+            OutlinedButton(
+                onClick = onSnooze,
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = GoldAccent
+                ),
+                border = BorderStroke(2.dp, GoldAccent),
+                shape = RoundedCornerShape(20.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(58.dp)
+            ) {
+                Text(
+                    text = "غَفْوَة (10 دَقَائِق)",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
                         letterSpacing = 1.sp
                     )
                 )
