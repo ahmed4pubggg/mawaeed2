@@ -13,6 +13,14 @@ class QuranRepository(private val dao: QuranDao) {
         dao.saveConfig(ConfigEntity("password", password))
     }
 
+    suspend fun getConfig(key: String, defaultValue: String): String {
+        return dao.getConfig(key)?.value ?: defaultValue
+    }
+
+    suspend fun saveConfig(key: String, value: String) {
+        dao.saveConfig(ConfigEntity(key, value))
+    }
+
     // Hour Headers
     val hourHeaders: Flow<List<HourHeaderEntity>> = dao.getHourHeaders()
 

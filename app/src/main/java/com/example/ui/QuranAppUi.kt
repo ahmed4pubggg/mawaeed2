@@ -57,6 +57,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import android.net.Uri
 import android.widget.Toast
+import android.content.res.Configuration
+import androidx.compose.ui.platform.LocalConfiguration
+import android.content.Intent
 
 enum class StudentSortType {
     ALPHA_ASC,
@@ -129,6 +132,8 @@ fun LoginScreen(viewModel: QuranViewModel) {
     var passwordInput by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
+    val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -144,7 +149,7 @@ fun LoginScreen(viewModel: QuranViewModel) {
     ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth(0.9f)
+                .fillMaxWidth(if (isLandscape) 0.5f else 0.9f)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -363,110 +368,201 @@ fun MainAppScreen(viewModel: QuranViewModel) {
         )
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        // App Header - Centered to avoid any empty spaces or offset alignment
-        CenterAlignedTopAppBar(
-            title = {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
+    val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+    if (isLandscape) {
+        Row(modifier = Modifier.fillMaxSize()) {
+            NavigationRail(
+                containerColor = MaterialTheme.colorScheme.surface,
+                header = {
                     Image(
                         painter = painterResource(id = R.drawable.ic_quran_logo),
                         contentDescription = "شعار",
                         modifier = Modifier
                             .size(36.dp)
                             .clip(CircleShape)
+                            .padding(2.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "برنامج المواعيد",
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onPrimaryContainer else Color.White
+                }
+            ) {
+                Spacer(modifier = Modifier.height(12.dp))
+                tabs.forEachIndexed { index, (label, icon) ->
+                    NavigationRailItem(
+                        selected = selectedTab == index,
+                        onClick = { selectedTab = index },
+                        icon = {
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = label
+                            )
+                        },
+                        label = {
+                            Text(
+                                text = label,
+                                fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
+                                fontSize = 11.sp
+                            )
+                        },
+                        colors = NavigationRailItemDefaults.colors(
+                            selectedIconColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                            selectedTextColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                            indicatorColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primaryContainer else LightTeal,
+                            unselectedIconColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f) else MediumTeal.copy(alpha = 0.7f),
+                            unselectedTextColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f) else MediumTeal.copy(alpha = 0.7f)
                         )
                     )
                 }
-            },
-            colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                containerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primaryContainer else DarkTeal
-            ),
-            actions = {
+
+                Spacer(modifier = Modifier.weight(1f))
+
                 IconButton(onClick = { showLogoutDialog = true }) {
                     Icon(
                         imageVector = Icons.Filled.Logout,
                         contentDescription = "خروج",
-                        tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onPrimaryContainer else Color.White
+                        tint = Color.Red
                     )
                 }
+                Spacer(modifier = Modifier.height(12.dp))
             }
-        )
 
-        // Contents Based on Selection
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-        ) {
-            when (selectedTab) {
-                0 -> AppointmentsTab(viewModel = viewModel)
-                1 -> StudentsTab(viewModel = viewModel)
-                2 -> PasswordTab(viewModel = viewModel)
-            }
-        }
+            Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                ) {
+                    when (selectedTab) {
+                        0 -> AppointmentsTab(viewModel = viewModel)
+                        1 -> StudentsTab(viewModel = viewModel)
+                        2 -> PasswordTab(viewModel = viewModel)
+                    }
+                }
 
-        // Dedicated Bottom Copyright Credit & App Bar
-        Surface(
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 8.dp
-        ) {
-            Column {
-                // Mini Credit Bar
+                // Dedicated Bottom Copyright Credit
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surfaceVariant else LightTeal.copy(alpha = 0.4f))
-                        .padding(vertical = 6.dp),
+                        .padding(vertical = 4.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = "بواسطة الشيخ أحمد النمس حفظه الله",
                         style = MaterialTheme.typography.bodySmall.copy(
                             color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp
                         )
                     )
                 }
-
-                NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    tonalElevation = 0.dp
-                ) {
-                    tabs.forEachIndexed { index, (label, icon) ->
-                        NavigationBarItem(
-                            selected = selectedTab == index,
-                            onClick = { selectedTab = index },
-                            icon = {
-                                Icon(
-                                    imageVector = icon,
-                                    contentDescription = label
-                                )
-                            },
-                            label = {
-                                Text(
-                                    text = label,
-                                    fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
-                                    fontSize = 11.sp
-                                )
-                            },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
-                                selectedTextColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
-                                indicatorColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primaryContainer else LightTeal,
-                                unselectedIconColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f) else MediumTeal.copy(alpha = 0.7f),
-                                unselectedTextColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f) else MediumTeal.copy(alpha = 0.7f)
+            }
+        }
+    } else {
+        Column(modifier = Modifier.fillMaxSize()) {
+            // App Header - Centered to avoid any empty spaces or offset alignment
+            CenterAlignedTopAppBar(
+                title = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_quran_logo),
+                            contentDescription = "شعار",
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "برنامج المواعيد",
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onPrimaryContainer else Color.White
                             )
                         )
+                    }
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primaryContainer else DarkTeal
+                ),
+                actions = {
+                    IconButton(onClick = { showLogoutDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Filled.Logout,
+                            contentDescription = "خروج",
+                            tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onPrimaryContainer else Color.White
+                        )
+                    }
+                }
+            )
+
+            // Contents Based on Selection
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                when (selectedTab) {
+                    0 -> AppointmentsTab(viewModel = viewModel)
+                    1 -> StudentsTab(viewModel = viewModel)
+                    2 -> PasswordTab(viewModel = viewModel)
+                }
+            }
+
+            // Dedicated Bottom Copyright Credit & App Bar
+            Surface(
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 8.dp
+            ) {
+                Column {
+                    // Mini Credit Bar
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surfaceVariant else LightTeal.copy(alpha = 0.4f))
+                            .padding(vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "بواسطة الشيخ أحمد النمس حفظه الله",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                                fontWeight = FontWeight.Bold
+                            )
+                        )
+                    }
+
+                    NavigationBar(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        tonalElevation = 0.dp
+                    ) {
+                        tabs.forEachIndexed { index, (label, icon) ->
+                            NavigationBarItem(
+                                selected = selectedTab == index,
+                                onClick = { selectedTab = index },
+                                icon = {
+                                    Icon(
+                                        imageVector = icon,
+                                        contentDescription = label
+                                    )
+                                },
+                                label = {
+                                    Text(
+                                        text = label,
+                                        fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
+                                        fontSize = 11.sp
+                                    )
+                                },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                                    selectedTextColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                                    indicatorColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primaryContainer else LightTeal,
+                                    unselectedIconColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f) else MediumTeal.copy(alpha = 0.7f),
+                                    unselectedTextColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f) else MediumTeal.copy(alpha = 0.7f)
+                                )
+                            )
+                        }
                     }
                 }
             }
@@ -2308,6 +2404,12 @@ fun PasswordTab(viewModel: QuranViewModel) {
 
 @Composable
 fun ZoomControls(viewModel: QuranViewModel) {
+    var showAlarmSettings by remember { mutableStateOf(false) }
+
+    if (showAlarmSettings) {
+        AlarmSettingsDialog(viewModel = viewModel, onDismiss = { showAlarmSettings = false })
+    }
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -2326,6 +2428,22 @@ fun ZoomControls(viewModel: QuranViewModel) {
             fontWeight = FontWeight.Bold,
             color = if (isSystemInDarkTheme()) LightText else DarkTeal
         )
+        
+        Spacer(modifier = Modifier.width(4.dp))
+
+        // Alarm Settings Trigger Button
+        IconButton(
+            onClick = { showAlarmSettings = true },
+            modifier = Modifier.size(28.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Notifications,
+                contentDescription = "إعدادات المنبه",
+                tint = if (viewModel.alarmEnabled) GoldAccent else (if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal),
+                modifier = Modifier.size(20.dp)
+            )
+        }
+
         Spacer(modifier = Modifier.weight(1f))
         
         // Minus Button
@@ -2381,4 +2499,249 @@ fun ZoomControls(viewModel: QuranViewModel) {
             }
         }
     }
+}
+
+@Composable
+fun AlarmSettingsDialog(
+    viewModel: QuranViewModel,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    val ringtoneLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val uri = result.data?.getParcelableExtra<Uri>(android.media.RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
+            if (uri != null) {
+                viewModel.setAlarmRingtone(context, uri.toString())
+            }
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Notifications,
+                    contentDescription = null,
+                    tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal
+                )
+                Text(
+                    text = "إعدادات منبه الحصص",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                    modifier = Modifier.weight(1f),
+                    textAlign = TextAlign.Right
+                )
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = Alignment.End
+            ) {
+                // Global Toggle Row
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f) else LightTeal.copy(alpha = 0.15f),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    Switch(
+                        checked = viewModel.alarmEnabled,
+                        onCheckedChange = { viewModel.toggleAlarmEnabled(context, it) },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                            checkedTrackColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primaryContainer else LightTeal
+                        )
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    Text(
+                        text = "تفعيل المنبه الصوتي للحصص",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurface else DarkTeal
+                    )
+                }
+
+                // Custom Ringtone Selector
+                if (viewModel.alarmEnabled) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f) else LightTeal.copy(alpha = 0.15f),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalAlignment = Alignment.End
+                    ) {
+                        Text(
+                            text = "نغمة المنبه:",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurfaceVariant else MediumTeal
+                        )
+                        
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Button(
+                                onClick = {
+                                    val intent = Intent(android.media.RingtoneManager.ACTION_RINGTONE_PICKER).apply {
+                                        putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_TYPE, android.media.RingtoneManager.TYPE_ALARM)
+                                        putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_TITLE, "اختر نغمة التنبيه للحصص")
+                                        putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, viewModel.alarmRingtoneUri?.let { Uri.parse(it) })
+                                        putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+                                        putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
+                                    }
+                                    ringtoneLauncher.launch(intent)
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primaryContainer else DarkTeal,
+                                    contentColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onPrimaryContainer else Color.White
+                                ),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("تغيير النغمة", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                            
+                            Spacer(modifier = Modifier.weight(1f))
+                            
+                            Text(
+                                text = if (viewModel.alarmRingtoneUri != null) "تم اختيار نغمة مخصصة 🎵" else "النغمة الافتراضية للجهاز 🔔",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurface else DarkTeal
+                            )
+                        }
+                    }
+
+                    // Times configuration for the 8 slots
+                    Text(
+                        text = "ضبط أوقات المنبه للأعمدة الثمانية:",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurfaceVariant else MediumTeal,
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    )
+
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        for (h in 0..7) {
+                            val colLabel = viewModel.draftHourHeaders[h] ?: "العمود ${h + 1}"
+                            val timeStr = viewModel.alarmTimes[h] ?: "12:00"
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(
+                                        color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f) else Color.White,
+                                        shape = RoundedCornerShape(10.dp)
+                                    )
+                                    .border(
+                                        width = 1.dp,
+                                        color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.outlineVariant else LightTeal.copy(alpha = 0.5f),
+                                        shape = RoundedCornerShape(10.dp)
+                                    )
+                                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                // Time selector button
+                                TextButton(
+                                    onClick = {
+                                        val parts = timeStr.split(":")
+                                        val curHour = parts.getOrNull(0)?.toIntOrNull() ?: 12
+                                        val curMinute = parts.getOrNull(1)?.toIntOrNull() ?: 0
+                                        android.app.TimePickerDialog(
+                                            context,
+                                            { _, hourOfDay, minute ->
+                                                val selectedTime = String.format("%02d:%02d", hourOfDay, minute)
+                                                viewModel.updateAlarmTime(context, h, selectedTime)
+                                            },
+                                            curHour,
+                                            curMinute,
+                                            false // friendly am-pm dial on device
+                                        ).show()
+                                    },
+                                    colors = ButtonDefaults.textButtonColors(
+                                        contentColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal
+                                    )
+                                ) {
+                                    val parts = timeStr.split(":")
+                                    val hInt = parts.getOrNull(0)?.toIntOrNull() ?: 12
+                                    val mInt = parts.getOrNull(1)?.toIntOrNull() ?: 0
+                                    val amPm = if (hInt >= 12) "م" else "ص"
+                                    val friendlyHour = when {
+                                        hInt == 0 -> 12
+                                        hInt > 12 -> hInt - 12
+                                        else -> hInt
+                                    }
+                                    val friendlyTime = String.format("%d:%02d %s", friendlyHour, mInt, amPm)
+
+                                    Text(
+                                        text = "⏰ $friendlyTime",
+                                        fontWeight = FontWeight.ExtraBold,
+                                        fontSize = 14.sp
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.weight(1f))
+
+                                Text(
+                                    text = colLabel,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurface else DarkTeal
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "قم بتفعيل المنبه في الأعلى ليقوم التطبيق بتنبيهك تلقائياً عند مواعيد الحصص المثبتة.",
+                            fontSize = 12.sp,
+                            color = if (isSystemInDarkTheme()) LightText else MediumTeal,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onDismiss,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal
+                ),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Text("تم", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            }
+        }
+    )
 }
