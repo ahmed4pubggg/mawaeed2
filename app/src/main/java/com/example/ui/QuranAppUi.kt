@@ -59,8 +59,10 @@ import android.net.Uri
 import android.widget.Toast
 
 enum class StudentSortType {
-    ALPHABETICAL,
-    MODIFICATION_DATE
+    ALPHA_ASC,
+    ALPHA_DESC,
+    DATE_DESC,
+    DATE_ASC
 }
 
 // Arabic days of the week starting Saturday
@@ -671,38 +673,37 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Draft status text
-                if (hasUnsavedChanges) {
+                // Draft status text styled as a beautiful compact badge of height 38.dp matching buttons
+                Box(
+                    modifier = Modifier
+                        .height(38.dp)
+                        .background(
+                            color = if (hasUnsavedChanges) Color.Red.copy(alpha = 0.1f) else GreenSuccess.copy(alpha = 0.1f),
+                            shape = RoundedCornerShape(10.dp)
+                        )
+                        .border(
+                            width = 1.dp,
+                            color = if (hasUnsavedChanges) Color.Red.copy(alpha = 0.3f) else GreenSuccess.copy(alpha = 0.3f),
+                            shape = RoundedCornerShape(10.dp)
+                        )
+                        .padding(horizontal = 12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             modifier = Modifier
                                 .size(8.dp)
-                                .background(Color.Red, shape = CircleShape)
+                                .background(if (hasUnsavedChanges) Color.Red else GreenSuccess, shape = CircleShape)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "التعديلات غير مثبتة",
-                            color = Color.Red,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                } else {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .background(GreenSuccess, shape = CircleShape)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "التعديلات مثبتة",
-                            color = GreenSuccess,
-                            fontSize = 12.sp,
+                            text = if (hasUnsavedChanges) "التعديلات غير مثبتة" else "التعديلات مثبتة",
+                            color = if (hasUnsavedChanges) Color.Red else GreenSuccess,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -714,12 +715,13 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
                      horizontalArrangement = Arrangement.spacedBy(8.dp)
                  ) {
                      if (hasUnsavedChanges) {
+                         val undoColor = if (isSystemInDarkTheme()) Color(0xFFE57373) else Color(0xFFD32F2F)
                          OutlinedButton(
                              onClick = { viewModel.revertAppointments() },
                              colors = ButtonDefaults.outlinedButtonColors(
-                                 contentColor = if (isSystemInDarkTheme()) Color.White else DarkTeal
+                                 contentColor = undoColor
                              ),
-                             border = BorderStroke(1.dp, if (isSystemInDarkTheme()) Color.White else DarkTeal),
+                             border = BorderStroke(1.dp, undoColor),
                              shape = RoundedCornerShape(10.dp),
                              contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                              modifier = Modifier.height(38.dp)
@@ -924,21 +926,24 @@ fun StudentsTab(viewModel: QuranViewModel) {
     val studentList by viewModel.students.collectAsState()
     val draftMonthHeaders = viewModel.draftMonthHeaders
     val draftPayments = viewModel.draftPayments
+    val draftStudents = viewModel.draftStudents
 
     // Search and Sort states
     var searchQuery by remember { mutableStateOf("") }
-    var sortType by remember { mutableStateOf(StudentSortType.ALPHABETICAL) }
+    var sortType by remember { mutableStateOf(StudentSortType.ALPHA_ASC) }
 
     // Filtered and sorted student list
-    val filteredAndSortedStudents = remember(studentList, searchQuery, sortType) {
-        studentList
+    val filteredAndSortedStudents = remember(draftStudents, searchQuery, sortType) {
+        draftStudents
             .filter { student ->
                 student.fullName.contains(searchQuery, ignoreCase = true)
             }
             .sortedWith { s1, s2 ->
                 when (sortType) {
-                    StudentSortType.ALPHABETICAL -> s1.fullName.compareTo(s2.fullName)
-                    StudentSortType.MODIFICATION_DATE -> s2.lastModified.compareTo(s1.lastModified)
+                    StudentSortType.ALPHA_ASC -> s1.fullName.compareTo(s2.fullName)
+                    StudentSortType.ALPHA_DESC -> s2.fullName.compareTo(s1.fullName)
+                    StudentSortType.DATE_DESC -> s2.lastModified.compareTo(s1.lastModified)
+                    StudentSortType.DATE_ASC -> s1.lastModified.compareTo(s2.lastModified)
                 }
             }
     }
@@ -965,155 +970,161 @@ fun StudentsTab(viewModel: QuranViewModel) {
     val dbMonths = viewModel.monthHeaders.collectAsState().value
     val dbPayments = viewModel.payments.collectAsState().value
 
-    val hasUnsavedChanges = remember(draftMonthHeaders, draftPayments, dbMonths, dbPayments) {
+    val hasUnsavedChanges = remember(draftMonthHeaders, draftPayments, dbMonths, dbPayments, studentList, viewModel.draftStudents, viewModel.deletedStudentIds) {
         val dbMonthsMap = dbMonths.associate { it.monthIndex to it.name }
         val dbPaymentsMap = dbPayments.associate { (it.studentId to it.monthIndex) to it.paid }
-        draftMonthHeaders != dbMonthsMap || draftPayments != dbPaymentsMap
+        draftMonthHeaders != dbMonthsMap || 
+                draftPayments != dbPaymentsMap || 
+                viewModel.draftStudents != studentList || 
+                viewModel.deletedStudentIds.isNotEmpty()
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Search and Sort controls Card (Replaces help card - Requirement 7 & 8)
-            Card(
+            // Search and Sort Row (Requirement 7 & 8)
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp, vertical = 6.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f) else LightTeal.copy(alpha = 0.15f)
-                ),
-                shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, if (isSystemInDarkTheme()) MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f) else LightTeal.copy(alpha = 0.5f))
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    // Search text field
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
-                        placeholder = { 
-                            Text(
-                                "البحث عن طالب...", 
-                                fontSize = 13.sp,
-                                color = if (isSystemInDarkTheme()) LightTextSecondary else MediumTeal.copy(alpha = 0.7f)
-                            ) 
-                        },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Filled.Search,
-                                contentDescription = "بحث",
-                                tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else MediumTeal,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        },
-                        trailingIcon = {
-                            if (searchQuery.isNotEmpty()) {
-                                IconButton(onClick = { searchQuery = "" }) {
-                                    Icon(
-                                        imageVector = Icons.Filled.Clear,
-                                        contentDescription = "مسح",
-                                        tint = if (isSystemInDarkTheme()) LightTextSecondary else MediumTeal,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                            }
-                        },
-                        singleLine = true,
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
-                            unfocusedBorderColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.outlineVariant else MediumTeal.copy(alpha = 0.3f),
-                            focusedContainerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surface else Color.White,
-                            unfocusedContainerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surface.copy(alpha = 0.7f) else Color.White
+                // Instant Search Bar
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(50.dp),
+                    placeholder = { 
+                        Text(
+                            "البحث الفوري عن طالب...", 
+                            fontSize = 13.sp,
+                            color = if (isSystemInDarkTheme()) LightTextSecondary else MediumTeal.copy(alpha = 0.7f)
+                        ) 
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Filled.Search,
+                            contentDescription = "بحث",
+                            tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else MediumTeal,
+                            modifier = Modifier.size(20.dp)
                         )
+                    },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(
+                                    imageVector = Icons.Filled.Clear,
+                                    contentDescription = "مسح",
+                                    tint = if (isSystemInDarkTheme()) LightTextSecondary else MediumTeal,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                        unfocusedBorderColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.outlineVariant else MediumTeal.copy(alpha = 0.3f),
+                        focusedContainerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surface else Color.White,
+                        unfocusedContainerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surface.copy(alpha = 0.7f) else Color.White
                     )
+                )
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                // Sort Dropdown Box
+                var sortMenuExpanded by remember { mutableStateOf(false) }
 
-                    // Sort Buttons Row
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Start
+                Box {
+                    IconButton(
+                        onClick = { sortMenuExpanded = true },
+                        modifier = Modifier
+                            .size(50.dp)
+                            .background(
+                                color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surfaceVariant else LightTeal.copy(alpha = 0.15f),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            .border(
+                                width = 1.dp,
+                                color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.outlineVariant else MediumTeal.copy(alpha = 0.3f),
+                                shape = RoundedCornerShape(12.dp)
+                            )
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Sort,
                             contentDescription = "فرز",
-                            tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else MediumTeal,
-                            modifier = Modifier.size(18.dp)
+                            tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                            modifier = Modifier.size(22.dp)
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "ترتيب حسب:",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isSystemInDarkTheme()) LightText else DarkTeal
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
+                    }
 
-                        // Alphabetical Sort Button
-                        val isAlphaSelected = sortType == StudentSortType.ALPHABETICAL
-                        AssistChip(
-                            onClick = { sortType = StudentSortType.ALPHABETICAL },
-                            label = { Text("أبجدي (أ - ي)", fontSize = 11.sp, fontWeight = if (isAlphaSelected) FontWeight.Bold else FontWeight.Normal) },
-                            leadingIcon = {
-                                if (isAlphaSelected) {
-                                    Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(14.dp))
-                                }
+                    DropdownMenu(
+                        expanded = sortMenuExpanded,
+                        onDismissRequest = { sortMenuExpanded = false },
+                        modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("الاسم (أ-ي)", fontSize = 13.sp, fontWeight = if (sortType == StudentSortType.ALPHA_ASC) FontWeight.Bold else FontWeight.Normal) },
+                            onClick = {
+                                sortType = StudentSortType.ALPHA_ASC
+                                sortMenuExpanded = false
                             },
-                            colors = AssistChipDefaults.assistChipColors(
-                                containerColor = if (isAlphaSelected) {
-                                    if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else LightTeal
-                                } else Color.Transparent,
-                                labelColor = if (isAlphaSelected) {
-                                    if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal
-                                } else {
-                                    if (isSystemInDarkTheme()) LightTextSecondary else MediumTeal
-                                }
-                            ),
-                            border = BorderStroke(
-                                1.dp,
-                                if (isAlphaSelected) {
-                                    if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal
-                                } else {
-                                    if (isSystemInDarkTheme()) MaterialTheme.colorScheme.outlineVariant else MediumTeal.copy(alpha = 0.3f)
-                                }
-                            )
-                        )
-
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        // Modification Date Sort Button
-                        val isDateSelected = sortType == StudentSortType.MODIFICATION_DATE
-                        AssistChip(
-                            onClick = { sortType = StudentSortType.MODIFICATION_DATE },
-                            label = { Text("تاريخ التعديل", fontSize = 11.sp, fontWeight = if (isDateSelected) FontWeight.Bold else FontWeight.Normal) },
                             leadingIcon = {
-                                if (isDateSelected) {
-                                    Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(14.dp))
-                                }
+                                Icon(
+                                    imageVector = if (sortType == StudentSortType.ALPHA_ASC) Icons.Filled.Check else Icons.Filled.SortByAlpha,
+                                    contentDescription = null,
+                                    tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("الاسم (ي-أ)", fontSize = 13.sp, fontWeight = if (sortType == StudentSortType.ALPHA_DESC) FontWeight.Bold else FontWeight.Normal) },
+                            onClick = {
+                                sortType = StudentSortType.ALPHA_DESC
+                                sortMenuExpanded = false
                             },
-                            colors = AssistChipDefaults.assistChipColors(
-                                containerColor = if (isDateSelected) {
-                                    if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else LightTeal
-                                } else Color.Transparent,
-                                labelColor = if (isDateSelected) {
-                                    if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal
-                                } else {
-                                    if (isSystemInDarkTheme()) LightTextSecondary else MediumTeal
-                                }
-                            ),
-                            border = BorderStroke(
-                                1.dp,
-                                if (isDateSelected) {
-                                    if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal
-                                } else {
-                                    if (isSystemInDarkTheme()) MaterialTheme.colorScheme.outlineVariant else MediumTeal.copy(alpha = 0.3f)
-                                }
-                            )
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = if (sortType == StudentSortType.ALPHA_DESC) Icons.Filled.Check else Icons.Filled.SortByAlpha,
+                                    contentDescription = null,
+                                    tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("الأحدث تعديلاً", fontSize = 13.sp, fontWeight = if (sortType == StudentSortType.DATE_DESC) FontWeight.Bold else FontWeight.Normal) },
+                            onClick = {
+                                sortType = StudentSortType.DATE_DESC
+                                sortMenuExpanded = false
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = if (sortType == StudentSortType.DATE_DESC) Icons.Filled.Check else Icons.Filled.History,
+                                    contentDescription = null,
+                                    tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("الأقدم تعديلاً", fontSize = 13.sp, fontWeight = if (sortType == StudentSortType.DATE_ASC) FontWeight.Bold else FontWeight.Normal) },
+                            onClick = {
+                                sortType = StudentSortType.DATE_ASC
+                                sortMenuExpanded = false
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = if (sortType == StudentSortType.DATE_ASC) Icons.Filled.Check else Icons.Filled.History,
+                                    contentDescription = null,
+                                    tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
                         )
                     }
                 }
@@ -1195,7 +1206,7 @@ fun StudentsTab(viewModel: QuranViewModel) {
                         // Header student corner (Fixed, doesn't scroll)
                         Box(
                             modifier = Modifier
-                                .size(width = 170.dp, height = 50.dp)
+                                .size(width = 120.dp, height = 40.dp)
                                 .background(if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primaryContainer else DarkTeal)
                                 .border(1.dp, MaterialTheme.colorScheme.outlineVariant),
                             contentAlignment = Alignment.Center
@@ -1218,8 +1229,8 @@ fun StudentsTab(viewModel: QuranViewModel) {
                                 val monthLabel = draftMonthHeaders[monthIdx] ?: "الشهر ${monthIdx + 1}"
                                 Box(
                                     modifier = Modifier
-                                        .width(105.dp)
-                                        .height(50.dp)
+                                        .width(75.dp)
+                                        .height(40.dp)
                                         .background(if (isSystemInDarkTheme()) MaterialTheme.colorScheme.secondaryContainer else MediumTeal)
                                         .clickable {
                                             editingMonthIndex = monthIdx
@@ -1265,7 +1276,7 @@ fun StudentsTab(viewModel: QuranViewModel) {
                         // Student Names Column (Vertically scrollable only)
                         Column(
                             modifier = Modifier
-                                .width(170.dp)
+                                .width(120.dp)
                                 .verticalScroll(verticalScrollState)
                                 .background(MaterialTheme.colorScheme.surface)
                                 .border(1.dp, MaterialTheme.colorScheme.outlineVariant)
@@ -1273,7 +1284,7 @@ fun StudentsTab(viewModel: QuranViewModel) {
                             filteredAndSortedStudents.forEachIndexed { sIdx, student ->
                                 Box(
                                     modifier = Modifier
-                                        .size(width = 170.dp, height = 65.dp)
+                                        .size(width = 120.dp, height = 46.dp)
                                         .background(
                                             if (sIdx % 2 == 0) {
                                                 if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f) else LightTeal.copy(alpha = 0.2f)
@@ -1332,14 +1343,14 @@ fun StudentsTab(viewModel: QuranViewModel) {
                             ) {
                                 for (monthIdx in 0..5) {
                                     Column(
-                                        modifier = Modifier.width(105.dp)
+                                        modifier = Modifier.width(75.dp)
                                     ) {
                                         filteredAndSortedStudents.forEachIndexed { sIdx, student ->
                                             val isPaid = draftPayments[student.id to monthIdx] ?: false
                                             Box(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .height(65.dp)
+                                                    .height(46.dp)
                                                     .background(
                                                         if (sIdx % 2 == 0) {
                                                             if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f) else LightTeal.copy(alpha = 0.1f)
@@ -1353,7 +1364,7 @@ fun StudentsTab(viewModel: QuranViewModel) {
                                                 IconButton(
                                                     onClick = { viewModel.toggleDraftPayment(student.id, monthIdx) },
                                                     modifier = Modifier
-                                                        .size(40.dp)
+                                                        .size(30.dp)
                                                         .clip(RoundedCornerShape(8.dp))
                                                     .background(
                                                         if (isPaid) {
@@ -1377,7 +1388,7 @@ fun StudentsTab(viewModel: QuranViewModel) {
                                                             imageVector = Icons.Filled.Check,
                                                             contentDescription = "تم الدفع",
                                                             tint = Color.White,
-                                                            modifier = Modifier.size(20.dp)
+                                                            modifier = Modifier.size(16.dp)
                                                         )
                                                     }
                                                 }
@@ -1395,7 +1406,7 @@ fun StudentsTab(viewModel: QuranViewModel) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -1420,32 +1431,32 @@ fun StudentsTab(viewModel: QuranViewModel) {
                         Text("+ إضافة", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
 
-                    if (hasUnsavedChanges) {
+                    // Status indicator styled as a beautiful compact badge of height 38.dp matching buttons
+                    Box(
+                        modifier = Modifier
+                            .height(38.dp)
+                            .background(
+                                color = if (hasUnsavedChanges) Color.Red.copy(alpha = 0.1f) else GreenSuccess.copy(alpha = 0.1f),
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                            .border(
+                                width = 1.dp,
+                                color = if (hasUnsavedChanges) Color.Red.copy(alpha = 0.3f) else GreenSuccess.copy(alpha = 0.3f),
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                            .padding(horizontal = 12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
                                 modifier = Modifier
                                     .size(8.dp)
-                                    .background(Color.Red, shape = CircleShape)
+                                    .background(if (hasUnsavedChanges) Color.Red else GreenSuccess, shape = CircleShape)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "التعديلات غير مثبتة",
-                                color = Color.Red,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    } else {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .background(if (isSystemInDarkTheme()) Color(0xFF4ADE80) else GreenSuccess, shape = CircleShape)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "التعديلات مثبتة",
-                                color = if (isSystemInDarkTheme()) Color(0xFF4ADE80) else GreenSuccess,
+                                text = if (hasUnsavedChanges) "التعديلات غير مثبتة" else "التعديلات مثبتة",
+                                color = if (hasUnsavedChanges) Color.Red else GreenSuccess,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -1459,12 +1470,13 @@ fun StudentsTab(viewModel: QuranViewModel) {
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     if (hasUnsavedChanges) {
+                        val undoColor = if (isSystemInDarkTheme()) Color(0xFFE57373) else Color(0xFFD32F2F)
                         OutlinedButton(
                             onClick = { viewModel.revertNamesAndPayments() },
                             colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = if (isSystemInDarkTheme()) Color.White else DarkTeal
+                                contentColor = undoColor
                             ),
-                            border = BorderStroke(1.dp, if (isSystemInDarkTheme()) Color.White else DarkTeal),
+                            border = BorderStroke(1.dp, undoColor),
                             shape = RoundedCornerShape(10.dp),
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                             modifier = Modifier.height(38.dp)
@@ -1900,21 +1912,21 @@ fun PasswordTab(viewModel: QuranViewModel) {
             modifier = Modifier
                 .fillMaxWidth(0.9f)
                 .verticalScroll(rememberScrollState())
-                .padding(vertical = 24.dp),
+                .padding(vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Icon(
                 imageVector = Icons.Filled.LockOpen,
                 contentDescription = "إدارة الأمان",
                 tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.tertiary else DeepGold,
-                modifier = Modifier.size(65.dp)
+                modifier = Modifier.size(45.dp)
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             Text(
                 text = "إدارة كلمة المرور وحماية التطبيق",
-                style = MaterialTheme.typography.titleLarge.copy(
+                style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.Bold,
                     color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal
                 ),
@@ -1925,18 +1937,18 @@ fun PasswordTab(viewModel: QuranViewModel) {
                 text = "يرجى الاحتفاظ بكلمة المرور الجديدة لتتمكن من فتح التطبيق لاحقاً بأمان",
                 style = MaterialTheme.typography.bodySmall.copy(color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurfaceVariant else MediumTeal),
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 4.dp, bottom = 24.dp)
+                modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
             )
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                shape = RoundedCornerShape(20.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+                shape = RoundedCornerShape(16.dp)
             ) {
                 Column(
                     modifier = Modifier
-                        .padding(20.dp)
+                        .padding(14.dp)
                         .fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
@@ -1944,9 +1956,9 @@ fun PasswordTab(viewModel: QuranViewModel) {
                     OutlinedTextField(
                         value = viewModel.oldPasswordInput,
                         onValueChange = { viewModel.oldPasswordInput = it },
-                        label = { Text("كلمة المرور القديمة الحالية") },
+                        label = { Text("كلمة المرور القديمة الحالية", fontSize = 12.sp) },
                         singleLine = true,
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.fillMaxWidth(),
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
@@ -1955,19 +1967,19 @@ fun PasswordTab(viewModel: QuranViewModel) {
                             focusedLabelColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal
                         ),
                         leadingIcon = {
-                            Icon(Icons.Filled.Lock, contentDescription = "الحالية", tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.secondary else MediumTeal)
+                            Icon(Icons.Filled.Lock, contentDescription = "الحالية", tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.secondary else MediumTeal, modifier = Modifier.size(18.dp))
                         }
                     )
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(11.dp))
 
                     // New Password Input
                     OutlinedTextField(
                         value = viewModel.newPasswordInput,
                         onValueChange = { viewModel.newPasswordInput = it },
-                        label = { Text("كلمة المرور الجديدة") },
+                        label = { Text("كلمة المرور الجديدة", fontSize = 12.sp) },
                         singleLine = true,
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.fillMaxWidth(),
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
@@ -1976,19 +1988,19 @@ fun PasswordTab(viewModel: QuranViewModel) {
                             focusedLabelColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal
                         ),
                         leadingIcon = {
-                            Icon(Icons.Filled.Key, contentDescription = "الجديدة", tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.secondary else MediumTeal)
+                            Icon(Icons.Filled.Key, contentDescription = "الجديدة", tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.secondary else MediumTeal, modifier = Modifier.size(18.dp))
                         }
                     )
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(11.dp))
 
                     // Confirm Password Input
                     OutlinedTextField(
                         value = viewModel.confirmPasswordInput,
                         onValueChange = { viewModel.confirmPasswordInput = it },
-                        label = { Text("تأكيد كلمة المرور الجديدة") },
+                        label = { Text("تأكيد كلمة المرور الجديدة", fontSize = 12.sp) },
                         singleLine = true,
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.fillMaxWidth(),
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
@@ -1997,61 +2009,63 @@ fun PasswordTab(viewModel: QuranViewModel) {
                             focusedLabelColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal
                         ),
                         leadingIcon = {
-                            Icon(Icons.Filled.Key, contentDescription = "تأكيد الجديدة", tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.secondary else MediumTeal)
+                            Icon(Icons.Filled.Key, contentDescription = "تأكيد الجديدة", tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.secondary else MediumTeal, modifier = Modifier.size(18.dp))
                         }
                     )
 
                     // Message alerts if any
                     viewModel.passwordChangeMessage?.let { msg ->
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
                         Text(
                             text = msg,
                             color = if (viewModel.passwordChangeSuccess) GreenSuccess else MaterialTheme.colorScheme.error,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp,
+                            fontSize = 12.sp,
                             textAlign = TextAlign.Center
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     // Save (Tathbeet) button for password change
                     Button(
                         onClick = { viewModel.changePassword() },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(50.dp),
+                            .height(38.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
                             contentColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onPrimary else Color.White
                         ),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(10.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Save,
                             contentDescription = "تثبيت كلمة السر الجديدة",
-                            modifier = Modifier.padding(end = 8.dp)
+                            modifier = Modifier.size(16.dp)
                         )
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = "تثبيت كلمة السر الجديدة",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Backup and Restore Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                shape = RoundedCornerShape(20.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+                shape = RoundedCornerShape(16.dp)
             ) {
                 Column(
                     modifier = Modifier
-                        .padding(20.dp)
+                        .padding(14.dp)
                         .fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
@@ -2059,14 +2073,14 @@ fun PasswordTab(viewModel: QuranViewModel) {
                         imageVector = Icons.Filled.Backup,
                         contentDescription = "النسخ الاحتياطي",
                         tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
-                        modifier = Modifier.size(48.dp)
+                        modifier = Modifier.size(34.dp)
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
                     Text(
                         text = "النسخ الاحتياطي والاستعادة",
-                        style = MaterialTheme.typography.titleMedium.copy(
+                        style = MaterialTheme.typography.titleSmall.copy(
                             fontWeight = FontWeight.Bold,
                             color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal
                         )
@@ -2075,15 +2089,16 @@ fun PasswordTab(viewModel: QuranViewModel) {
                     Text(
                         text = "احفظ نسخة من جدول المواعيد والأسماء والمدفوعات على هاتفك لاستعادتها في أي وقت عند حذف البرنامج أو تهيئة الجهاز.",
                         style = MaterialTheme.typography.bodySmall.copy(
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 11.sp
                         ),
                         textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(top = 4.dp, bottom = 20.dp)
+                        modifier = Modifier.padding(top = 4.dp, bottom = 14.dp)
                     )
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         // Backup button (Export)
                         Button(
@@ -2092,16 +2107,16 @@ fun PasswordTab(viewModel: QuranViewModel) {
                             },
                             modifier = Modifier
                                 .weight(1f)
-                                .height(48.dp),
+                                .height(38.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
                                 contentColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onPrimary else Color.White
                             ),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(10.dp)
                         ) {
-                            Icon(Icons.Filled.CloudUpload, contentDescription = "تصدير")
+                            Icon(Icons.Filled.CloudUpload, contentDescription = "تصدير", modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("تصدير", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text("تصدير", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                         }
 
                         // Restore button (Import)
@@ -2111,16 +2126,16 @@ fun PasswordTab(viewModel: QuranViewModel) {
                             },
                             modifier = Modifier
                                 .weight(1f)
-                                .height(48.dp),
+                                .height(38.dp),
                             colors = ButtonDefaults.outlinedButtonColors(
                                 contentColor = if (isSystemInDarkTheme()) Color.White else DarkTeal
                             ),
                             border = BorderStroke(1.dp, if (isSystemInDarkTheme()) Color.White else DarkTeal),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(10.dp)
                         ) {
-                            Icon(Icons.Filled.CloudDownload, contentDescription = "استيراد")
+                            Icon(Icons.Filled.CloudDownload, contentDescription = "استيراد", modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("استيراد", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text("استيراد", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                         }
                     }
                 }

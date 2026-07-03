@@ -46,6 +46,8 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
         private set
     var draftPayments by mutableStateOf<Map<Pair<Int, Int>, Boolean>>(emptyMap())
         private set
+    var draftStudents by mutableStateOf<List<StudentEntity>>(emptyList())
+    var deletedStudentIds by mutableStateOf<Set<Int>>(emptySet())
 
     // Password Management Fields
     var oldPasswordInput by mutableStateOf("")
@@ -127,6 +129,13 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
             }
+            launch {
+                students.collect { list ->
+                    if (draftStudents.isEmpty() && list.isNotEmpty()) {
+                        draftStudents = list
+                    }
+                }
+            }
         }
     }
 
@@ -159,6 +168,8 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
         draftCells = appointmentCells.value.associate { (it.dayIndex to it.hourIndex) to it.content }
         draftMonthHeaders = monthHeaders.value.associate { it.monthIndex to it.name }
         draftPayments = payments.value.associate { (it.studentId to it.monthIndex) to it.paid }
+        draftStudents = students.value
+        deletedStudentIds = emptySet()
     }
 
     // --- APPOINTMENTS (MAWA'EED) MUTATORS ---
@@ -204,43 +215,42 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
 
     fun addStudent(fullName: String) {
         if (fullName.trim().isEmpty()) return
+        val newTempId = (draftStudents.minOfOrNull { it.id } ?: 0).let { if (it < 0) it - 1 else -1 }
+        val newStudent = StudentEntity(id = newTempId, fullName = fullName.trim(), lastModified = System.currentTimeMillis())
+        draftStudents = draftStudents + newStudent
         viewModelScope.launch {
-            try {
-                val newStudent = StudentEntity(fullName = fullName.trim())
-                repository.saveStudent(newStudent)
-                _uiEvent.emit("تم إضافة الطالب ${fullName.trim()} بنجاح")
-            } catch (e: Exception) {
-                _uiEvent.emit("حدث خطأ: ${e.localizedMessage}")
-            }
+            _uiEvent.emit("تم إضافة الطالب مؤقتاً: ${fullName.trim()}. اضغط تثبيت لحفظ التغييرات!")
         }
     }
 
     fun deleteStudent(studentId: Int, studentName: String) {
-        viewModelScope.launch {
-            try {
-                repository.deleteStudent(studentId)
-                // Clean from draft payments too
-                val updatedPayments = draftPayments.toMutableMap()
-                val keysToRemove = updatedPayments.keys.filter { it.first == studentId }
-                keysToRemove.forEach { updatedPayments.remove(it) }
-                draftPayments = updatedPayments
+        draftStudents = draftStudents.filter { it.id != studentId }
+        
+        // Clean from draft payments too
+        val updatedPayments = draftPayments.toMutableMap()
+        val keysToRemove = updatedPayments.keys.filter { it.first == studentId }
+        keysToRemove.forEach { updatedPayments.remove(it) }
+        draftPayments = updatedPayments
 
-                _uiEvent.emit("تم حذف الطالب $studentName بنجاح")
-            } catch (e: Exception) {
-                _uiEvent.emit("حدث خطأ أثناء الحذف: ${e.localizedMessage}")
-            }
+        if (studentId > 0) {
+            deletedStudentIds = deletedStudentIds + studentId
+        }
+        viewModelScope.launch {
+            _uiEvent.emit("تم حذف الطالب $studentName مؤقتاً. اضغط تثبيت لحفظ التغييرات!")
         }
     }
 
     fun updateStudentName(studentId: Int, newName: String) {
         if (newName.trim().isEmpty()) return
-        viewModelScope.launch {
-            try {
-                repository.updateStudent(StudentEntity(id = studentId, fullName = newName.trim()))
-                _uiEvent.emit("تم تعديل اسم الطالب بنجاح")
-            } catch (e: Exception) {
-                _uiEvent.emit("حدث خطأ: ${e.localizedMessage}")
+        draftStudents = draftStudents.map {
+            if (it.id == studentId) {
+                it.copy(fullName = newName.trim(), lastModified = System.currentTimeMillis())
+            } else {
+                it
             }
+        }
+        viewModelScope.launch {
+            _uiEvent.emit("تم تعديل الاسم مؤقتاً. اضغط تثبيت لحفظ التغييرات!")
         }
     }
 
@@ -263,17 +273,64 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
     fun saveNamesAndPayments() {
         viewModelScope.launch {
             try {
-                // Save month headers
+                // 1. Save month headers
                 val monthEntities = draftMonthHeaders.map { (index, name) ->
                     MonthHeaderEntity(index, name)
                 }
                 repository.saveMonthHeaders(monthEntities)
 
-                // Save payments
-                val paymentEntities = draftPayments.map { (key, paid) ->
-                    PaymentEntity(key.first, key.second, paid)
+                // 2. Delete removed students
+                deletedStudentIds.forEach { id ->
+                    repository.deleteStudent(id)
+                }
+
+                // 3. Save draft students (and map temp negative IDs to new autogenerated IDs)
+                val idMapping = mutableMapOf<Int, Int>()
+                draftStudents.forEach { student ->
+                    if (student.id < 0) {
+                        // New student, save with 0 so Room autogenerates ID
+                        val savedId = repository.saveStudent(student.copy(id = 0))
+                        idMapping[student.id] = savedId.toInt()
+                    } else {
+                        // Existing student, update/save directly
+                        repository.saveStudent(student)
+                    }
+                }
+
+                // 4. Map draft payments to real IDs and save
+                val paymentEntities = draftPayments.mapNotNull { (key, paid) ->
+                    val (tempStudentId, monthIndex) = key
+                    // If student was deleted, skip
+                    if (tempStudentId in deletedStudentIds) return@mapNotNull null
+                    
+                    val realStudentId = if (tempStudentId < 0) {
+                        idMapping[tempStudentId] ?: return@mapNotNull null
+                    } else {
+                        tempStudentId
+                    }
+                    PaymentEntity(realStudentId, monthIndex, paid)
                 }
                 repository.savePayments(paymentEntities)
+
+                // 5. Update draft state instantly with actual database IDs
+                val updatedDraftStudents = draftStudents.map { student ->
+                    if (student.id < 0) {
+                        student.copy(id = idMapping[student.id] ?: 0)
+                    } else {
+                        student
+                    }
+                }.filter { it.id > 0 }
+                
+                draftStudents = updatedDraftStudents
+                deletedStudentIds = emptySet()
+
+                // Update draft payments with real IDs
+                val updatedDraftPayments = draftPayments.mapKeys { (key, _) ->
+                    val (tempId, monthIndex) = key
+                    val realId = if (tempId < 0) idMapping[tempId] ?: tempId else tempId
+                    realId to monthIndex
+                }.filterKeys { it.first > 0 }
+                draftPayments = updatedDraftPayments
 
                 _uiEvent.emit("تم تثبيت تغييرات الأسماء والمدفوعات بنجاح!")
             } catch (e: Exception) {
@@ -364,6 +421,8 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
     fun revertNamesAndPayments() {
         draftMonthHeaders = monthHeaders.value.associate { it.monthIndex to it.name }
         draftPayments = payments.value.associate { (it.studentId to it.monthIndex) to it.paid }
+        draftStudents = students.value
+        deletedStudentIds = emptySet()
         viewModelScope.launch {
             _uiEvent.emit("تم التراجع عن تعديلات شؤون الطلاب والمدفوعات")
         }
