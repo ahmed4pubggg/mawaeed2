@@ -204,7 +204,7 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 repository.saveAppointmentCells(cellEntities)
 
-                _uiEvent.emit("تم تثبيت تغييرات جدول المواعيد بنجاح!")
+                // Success snackbar removed per user request
             } catch (e: Exception) {
                 _uiEvent.emit("حدث خطأ أثناء حفظ المواعيد: ${e.localizedMessage}")
             }
@@ -332,7 +332,7 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
                 }.filterKeys { it.first > 0 }
                 draftPayments = updatedDraftPayments
 
-                _uiEvent.emit("تم تثبيت تغييرات الأسماء والمدفوعات بنجاح!")
+                // Success snackbar removed per user request
             } catch (e: Exception) {
                 _uiEvent.emit("حدث خطأ أثناء حفظ البيانات: ${e.localizedMessage}")
             }
@@ -382,7 +382,7 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
             newPasswordInput = ""
             confirmPasswordInput = ""
 
-            _uiEvent.emit("تم تغيير كلمة السر بنجاح!")
+            // Success snackbar removed per user request
         }
     }
 
@@ -394,6 +394,21 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
     /**
      * Verifies the password and saves the draft names and payments.
      */
+    fun verifyPassword(
+        password: String,
+        onSuccess: () -> Unit,
+        onFailure: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            val correctPassword = repository.getPassword()
+            if (password == correctPassword) {
+                onSuccess()
+            } else {
+                onFailure("كلمة السر غير صحيحة، يرجى المحاولة مرة أخرى")
+            }
+        }
+    }
+
     fun verifyPasswordAndSave(
         password: String,
         onSuccess: () -> Unit,

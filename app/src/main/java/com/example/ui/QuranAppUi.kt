@@ -305,12 +305,63 @@ fun LoginScreen(viewModel: QuranViewModel) {
 @Composable
 fun MainAppScreen(viewModel: QuranViewModel) {
     var selectedTab by remember { mutableStateOf(0) }
+    var showLogoutDialog by remember { mutableStateOf(false) }
 
     val tabs = listOf(
         "جدول المواعيد" to Icons.Filled.CalendarMonth,
         "شؤون الطلاب" to Icons.Filled.People,
         "كلمة السر" to Icons.Filled.Lock
     )
+
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            title = {
+                Text(
+                    text = "تأكيد تسجيل الخروج",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                    textAlign = TextAlign.Right,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            text = {
+                Text(
+                    text = "هل أنت متأكد من رغبتك في تسجيل الخروج من البرنامج؟",
+                    fontSize = 14.sp,
+                    textAlign = TextAlign.Right,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showLogoutDialog = false
+                        viewModel.logout()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.Red,
+                        contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.height(38.dp)
+                ) {
+                    Text("تسجيل الخروج", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showLogoutDialog = false },
+                    border = BorderStroke(1.dp, if (isSystemInDarkTheme()) MaterialTheme.colorScheme.outline else MediumTeal),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.height(38.dp)
+                ) {
+                    Text("إلغاء", fontSize = 12.sp)
+                }
+            }
+        )
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         // App Header - Centered to avoid any empty spaces or offset alignment
@@ -341,7 +392,7 @@ fun MainAppScreen(viewModel: QuranViewModel) {
                 containerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primaryContainer else DarkTeal
             ),
             actions = {
-                IconButton(onClick = { viewModel.logout() }) {
+                IconButton(onClick = { showLogoutDialog = true }) {
                     Icon(
                         imageVector = Icons.Filled.Logout,
                         contentDescription = "خروج",
@@ -677,36 +728,23 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Draft status text styled as a beautiful compact badge of height 38.dp matching buttons
-                Box(
-                    modifier = Modifier
-                        .height(38.dp)
-                        .background(
-                            color = if (hasUnsavedChanges) Color.Red.copy(alpha = 0.1f) else GreenSuccess.copy(alpha = 0.1f),
-                            shape = RoundedCornerShape(10.dp)
-                        )
-                        .border(
-                            width = 1.dp,
-                            color = if (hasUnsavedChanges) Color.Red.copy(alpha = 0.3f) else GreenSuccess.copy(alpha = 0.3f),
-                            shape = RoundedCornerShape(10.dp)
-                        )
-                        .padding(horizontal = 12.dp),
-                    contentAlignment = Alignment.Center
+                // Draft status text without enclosing badge box, keeping standard text and red/green colors
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(vertical = 4.dp, horizontal = 4.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .background(if (hasUnsavedChanges) Color.Red else GreenSuccess, shape = CircleShape)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = if (hasUnsavedChanges) "التعديلات غير مثبتة" else "التعديلات مثبتة",
-                            color = if (hasUnsavedChanges) Color.Red else GreenSuccess,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .background(if (hasUnsavedChanges) Color.Red else GreenSuccess, shape = CircleShape)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = if (hasUnsavedChanges) "التعديلات غير مثبتة" else "التعديلات مثبتة",
+                        color = if (hasUnsavedChanges) Color.Red else GreenSuccess,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
 
                  // Save / Revert buttons
@@ -1203,10 +1241,10 @@ fun StudentsTab(viewModel: QuranViewModel) {
                             .fillMaxWidth()
                             .padding(horizontal = 8.dp)
                     ) {
-                        // Header student corner (Fixed, doesn't scroll)
+                        // Header student corner (Fixed, doesn't scroll) - Increased 10% horizontally
                         Box(
                             modifier = Modifier
-                                .size(width = 120.dp, height = 40.dp)
+                                .size(width = 132.dp, height = 40.dp)
                                 .background(if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primaryContainer else DarkTeal)
                                 .border(1.dp, MaterialTheme.colorScheme.outlineVariant),
                             contentAlignment = Alignment.Center
@@ -1273,10 +1311,10 @@ fun StudentsTab(viewModel: QuranViewModel) {
                             .weight(1f)
                             .padding(horizontal = 8.dp)
                     ) {
-                        // Student Names Column (Vertically scrollable only)
+                        // Student Names Column (Vertically scrollable only) - Increased 10% horizontally
                         Column(
                             modifier = Modifier
-                                .width(120.dp)
+                                .width(132.dp)
                                 .verticalScroll(verticalScrollState)
                                 .background(MaterialTheme.colorScheme.surface)
                                 .border(1.dp, MaterialTheme.colorScheme.outlineVariant)
@@ -1284,7 +1322,7 @@ fun StudentsTab(viewModel: QuranViewModel) {
                             filteredAndSortedStudents.forEachIndexed { sIdx, student ->
                                 Box(
                                     modifier = Modifier
-                                        .size(width = 120.dp, height = 46.dp)
+                                        .size(width = 132.dp, height = 46.dp)
                                         .background(
                                             if (sIdx % 2 == 0) {
                                                 if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f) else LightTeal.copy(alpha = 0.2f)
@@ -1364,8 +1402,8 @@ fun StudentsTab(viewModel: QuranViewModel) {
                                                 IconButton(
                                                     onClick = { viewModel.toggleDraftPayment(student.id, monthIdx) },
                                                     modifier = Modifier
-                                                        .size(30.dp)
-                                                        .clip(RoundedCornerShape(8.dp))
+                                                        .size(width = 30.dp, height = 26.dp)
+                                                        .clip(RoundedCornerShape(6.dp))
                                                     .background(
                                                         if (isPaid) {
                                                             GreenSuccess
@@ -1380,7 +1418,7 @@ fun StudentsTab(viewModel: QuranViewModel) {
                                                         } else {
                                                             if (isSystemInDarkTheme()) MaterialTheme.colorScheme.outline else MediumTeal.copy(alpha = 0.5f)
                                                         },
-                                                        RoundedCornerShape(8.dp)
+                                                        RoundedCornerShape(6.dp)
                                                     )
                                                 ) {
                                                     if (isPaid) {
@@ -1431,36 +1469,23 @@ fun StudentsTab(viewModel: QuranViewModel) {
                         Text("+ إضافة", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
 
-                    // Status indicator styled as a beautiful compact badge of height 38.dp matching buttons
-                    Box(
-                        modifier = Modifier
-                            .height(38.dp)
-                            .background(
-                                color = if (hasUnsavedChanges) Color.Red.copy(alpha = 0.1f) else GreenSuccess.copy(alpha = 0.1f),
-                                shape = RoundedCornerShape(10.dp)
-                            )
-                            .border(
-                                width = 1.dp,
-                                color = if (hasUnsavedChanges) Color.Red.copy(alpha = 0.3f) else GreenSuccess.copy(alpha = 0.3f),
-                                shape = RoundedCornerShape(10.dp)
-                            )
-                            .padding(horizontal = 12.dp),
-                        contentAlignment = Alignment.Center
+                    // Status indicator without enclosing badge box, keeping standard text and red/green colors
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(vertical = 4.dp, horizontal = 4.dp)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .background(if (hasUnsavedChanges) Color.Red else GreenSuccess, shape = CircleShape)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = if (hasUnsavedChanges) "التعديلات غير مثبتة" else "التعديلات مثبتة",
-                                color = if (hasUnsavedChanges) Color.Red else GreenSuccess,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .background(if (hasUnsavedChanges) Color.Red else GreenSuccess, shape = CircleShape)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (hasUnsavedChanges) "التعديلات غير مثبتة" else "التعديلات مثبتة",
+                            color = if (hasUnsavedChanges) Color.Red else GreenSuccess,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
 
@@ -1847,6 +1872,11 @@ fun StudentsTab(viewModel: QuranViewModel) {
 fun PasswordTab(viewModel: QuranViewModel) {
     val context = LocalContext.current
 
+    // States for backup and restore password protection
+    var pendingBackupAction by remember { mutableStateOf<String?>(null) } // "EXPORT" or "IMPORT"
+    var confirmPasswordInputBackup by remember { mutableStateOf("") }
+    var confirmPasswordErrorBackup by remember { mutableStateOf<String?>(null) }
+
     // Launchers for Backup and Restore
     val createBackupLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
@@ -1886,6 +1916,128 @@ fun PasswordTab(viewModel: QuranViewModel) {
                 Toast.makeText(context, "خطأ في فتح الملف: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
             }
         }
+    }
+
+    // Password Confirmation Dialog for Export / Import Protection
+    if (pendingBackupAction != null) {
+        var isVerifyingBackup by remember { mutableStateOf(false) }
+
+        AlertDialog(
+            onDismissRequest = {
+                pendingBackupAction = null
+                confirmPasswordInputBackup = ""
+                confirmPasswordErrorBackup = null
+            },
+            title = {
+                Text(
+                    text = if (pendingBackupAction == "EXPORT") "تأكيد كلمة المرور للتصدير" else "تأكيد كلمة المرور للاستيراد",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                    textAlign = TextAlign.Right,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.End
+                ) {
+                    Text(
+                        text = "يرجى إدخال كلمة سر البرنامج للتأكيد ومتابعة العملية:",
+                        fontSize = 13.sp,
+                        textAlign = TextAlign.Right,
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value = confirmPasswordInputBackup,
+                        onValueChange = {
+                            confirmPasswordInputBackup = it
+                            confirmPasswordErrorBackup = null
+                        },
+                        label = { Text("كلمة المرور", fontSize = 12.sp) },
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                            focusedLabelColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal
+                        ),
+                        leadingIcon = {
+                            Icon(
+                                Icons.Filled.Lock,
+                                contentDescription = "كلمة المرور",
+                                tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.secondary else MediumTeal,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    )
+                    if (confirmPasswordErrorBackup != null) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = confirmPasswordErrorBackup ?: "",
+                            color = MaterialTheme.colorScheme.error,
+                            fontSize = 12.sp,
+                            textAlign = TextAlign.Right,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (isVerifyingBackup) return@Button
+                        isVerifyingBackup = true
+                        viewModel.verifyPassword(
+                            password = confirmPasswordInputBackup,
+                            onSuccess = {
+                                isVerifyingBackup = false
+                                val action = pendingBackupAction
+                                pendingBackupAction = null
+                                confirmPasswordInputBackup = ""
+                                confirmPasswordErrorBackup = null
+                                if (action == "EXPORT") {
+                                    createBackupLauncher.launch("quran_app_backup_${System.currentTimeMillis() / 1000}.json")
+                                } else if (action == "IMPORT") {
+                                    restoreBackupLauncher.launch(arrayOf("application/json", "application/octet-stream", "*/*"))
+                                }
+                            },
+                            onFailure = { errorMsg ->
+                                isVerifyingBackup = false
+                                confirmPasswordErrorBackup = errorMsg
+                            }
+                        )
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                        contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.height(38.dp)
+                ) {
+                    Text("تأكيد", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = {
+                        pendingBackupAction = null
+                        confirmPasswordInputBackup = ""
+                        confirmPasswordErrorBackup = null
+                    },
+                    border = BorderStroke(1.dp, if (isSystemInDarkTheme()) MaterialTheme.colorScheme.outline else MediumTeal),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.height(38.dp)
+                ) {
+                    Text("إلغاء", fontSize = 12.sp)
+                }
+            }
+        )
     }
 
     // Clear alerts when this tab is loaded
@@ -2103,7 +2255,9 @@ fun PasswordTab(viewModel: QuranViewModel) {
                         // Backup button (Export)
                         Button(
                             onClick = {
-                                createBackupLauncher.launch("quran_app_backup_${System.currentTimeMillis() / 1000}.json")
+                                pendingBackupAction = "EXPORT"
+                                confirmPasswordInputBackup = ""
+                                confirmPasswordErrorBackup = null
                             },
                             modifier = Modifier
                                 .weight(1f)
@@ -2122,7 +2276,9 @@ fun PasswordTab(viewModel: QuranViewModel) {
                         // Restore button (Import)
                         OutlinedButton(
                             onClick = {
-                                restoreBackupLauncher.launch(arrayOf("application/json", "application/octet-stream", "*/*"))
+                                pendingBackupAction = "IMPORT"
+                                confirmPasswordInputBackup = ""
+                                confirmPasswordErrorBackup = null
                             },
                             modifier = Modifier
                                 .weight(1f)
