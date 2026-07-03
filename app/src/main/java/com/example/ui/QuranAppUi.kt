@@ -482,6 +482,7 @@ fun MainAppScreen(viewModel: QuranViewModel) {
 fun AppointmentsTab(viewModel: QuranViewModel) {
     val draftHourHeaders = viewModel.draftHourHeaders
     val draftCells = viewModel.draftCells
+    val scale = viewModel.tableZoomScale
 
     // State for editing dialogs
     var editingHeaderIndex by remember { mutableStateOf<Int?>(null) }
@@ -538,6 +539,8 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
                 }
             }
 
+            ZoomControls(viewModel = viewModel)
+
             // Outer Schedule Layout (RTL-Native structure) with Sticky Headers & Days Column
             Column(
                 modifier = Modifier
@@ -553,7 +556,7 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
                     // Top right corner cell (Fixed, doesn't scroll)
                     Box(
                         modifier = Modifier
-                            .size(width = 85.dp, height = 55.dp)
+                            .size(width = (85 * scale).dp, height = (55 * scale).dp)
                             .background(if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primaryContainer else DarkTeal)
                             .border(1.dp, MaterialTheme.colorScheme.outlineVariant),
                         contentAlignment = Alignment.Center
@@ -562,7 +565,7 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
                             text = "اليوم",
                             color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onPrimaryContainer else Color.White,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp
+                            fontSize = (13 * scale).sp
                         )
                     }
 
@@ -576,8 +579,8 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
                             val hourLabel = draftHourHeaders[hourIdx] ?: "${hourIdx + 12}"
                             Box(
                                 modifier = Modifier
-                                    .width(135.dp)
-                                    .height(55.dp)
+                                    .width((135 * scale).dp)
+                                    .height((55 * scale).dp)
                                     .background(if (isSystemInDarkTheme()) MaterialTheme.colorScheme.secondaryContainer else MediumTeal)
                                     .clickable {
                                         editingHeaderIndex = hourIdx
@@ -595,7 +598,7 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
                                         text = hourLabel,
                                         color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSecondaryContainer else Color.White,
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 13.sp,
+                                        fontSize = (13 * scale).sp,
                                         textAlign = TextAlign.Center,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
@@ -623,7 +626,7 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
                     // Days Column (Vertically scrollable only)
                     Column(
                         modifier = Modifier
-                            .width(85.dp)
+                            .width((85 * scale).dp)
                             .verticalScroll(verticalScrollState)
                             .background(MaterialTheme.colorScheme.surface)
                             .border(1.dp, MaterialTheme.colorScheme.outlineVariant)
@@ -631,7 +634,7 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
                         WEEK_DAYS.forEachIndexed { index, day ->
                             Box(
                                 modifier = Modifier
-                                    .size(width = 85.dp, height = 70.dp)
+                                    .size(width = (85 * scale).dp, height = (70 * scale).dp)
                                     .background(
                                         if (isSystemInDarkTheme()) {
                                             if (index % 2 == 0) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f) else MaterialTheme.colorScheme.surface
@@ -646,7 +649,7 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
                                     text = day,
                                     fontWeight = FontWeight.Bold,
                                     color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurface else DarkTeal,
-                                    fontSize = 14.sp
+                                    fontSize = (14 * scale).sp
                                 )
                             }
                         }
@@ -665,14 +668,14 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
                             for (hourIdx in 0..7) {
                                 Column(
                                     modifier = Modifier
-                                        .width(135.dp)
+                                        .width((135 * scale).dp)
                                 ) {
                                     for (dayIdx in 0..6) {
                                         val cellContent = draftCells[dayIdx to hourIdx] ?: ""
                                         Box(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .height(70.dp)
+                                                .height((70 * scale).dp)
                                                 .background(
                                                     if (isSystemInDarkTheme()) {
                                                         if (cellContent.isNotEmpty()) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
@@ -698,7 +701,7 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
                                                     text = cellContent,
                                                     color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurface else DarkTeal,
                                                     fontWeight = FontWeight.Bold,
-                                                    fontSize = 12.sp,
+                                                    fontSize = (12 * scale).sp,
                                                     textAlign = TextAlign.Center,
                                                     maxLines = 3,
                                                     overflow = TextOverflow.Ellipsis
@@ -707,7 +710,7 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
                                                 Text(
                                                     text = "+",
                                                     color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f) else MediumTeal.copy(alpha = 0.4f),
-                                                    fontSize = 16.sp,
+                                                    fontSize = (16 * scale).sp,
                                                     fontWeight = FontWeight.Bold
                                                 )
                                             }
@@ -736,12 +739,12 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
                     Box(
                         modifier = Modifier
                             .size(8.dp)
-                            .background(if (hasUnsavedChanges) Color.Red else GreenSuccess, shape = CircleShape)
+                            .background(if (hasUnsavedChanges) Color(0xFFEF5350) else GreenSuccess, shape = CircleShape)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = if (hasUnsavedChanges) "التعديلات غير مثبتة" else "التعديلات مثبتة",
-                        color = if (hasUnsavedChanges) Color.Red else GreenSuccess,
+                        color = if (hasUnsavedChanges) Color(0xFFEF5350) else GreenSuccess,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -965,6 +968,7 @@ fun StudentsTab(viewModel: QuranViewModel) {
     val draftMonthHeaders = viewModel.draftMonthHeaders
     val draftPayments = viewModel.draftPayments
     val draftStudents = viewModel.draftStudents
+    val scale = viewModel.tableZoomScale
 
     // Search and Sort states
     var searchQuery by remember { mutableStateOf("") }
@@ -1168,7 +1172,7 @@ fun StudentsTab(viewModel: QuranViewModel) {
                 }
             }
 
-            if (studentList.isEmpty()) {
+            if (draftStudents.isEmpty()) {
                 // Empty State illustration / helper (No students registered yet)
                 Box(
                     modifier = Modifier
@@ -1229,6 +1233,8 @@ fun StudentsTab(viewModel: QuranViewModel) {
                     }
                 }
             } else {
+                ZoomControls(viewModel = viewModel)
+
                 // Unified bidirectional scroll wrapper with Sticky Headers & Student Names Column
                 Column(
                     modifier = Modifier
@@ -1241,10 +1247,10 @@ fun StudentsTab(viewModel: QuranViewModel) {
                             .fillMaxWidth()
                             .padding(horizontal = 8.dp)
                     ) {
-                        // Header student corner (Fixed, doesn't scroll) - Increased 10% horizontally
+                        // Header student corner (Fixed, doesn't scroll) - Increased 20% horizontally & scaled
                         Box(
                             modifier = Modifier
-                                .size(width = 132.dp, height = 40.dp)
+                                .size(width = (158 * scale).dp, height = (40 * scale).dp)
                                 .background(if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primaryContainer else DarkTeal)
                                 .border(1.dp, MaterialTheme.colorScheme.outlineVariant),
                             contentAlignment = Alignment.Center
@@ -1253,7 +1259,7 @@ fun StudentsTab(viewModel: QuranViewModel) {
                                 text = "اسم الطالب ثلاثي",
                                 color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onPrimaryContainer else Color.White,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp
+                                fontSize = (13 * scale).sp
                             )
                         }
 
@@ -1267,8 +1273,8 @@ fun StudentsTab(viewModel: QuranViewModel) {
                                 val monthLabel = draftMonthHeaders[monthIdx] ?: "الشهر ${monthIdx + 1}"
                                 Box(
                                     modifier = Modifier
-                                        .width(75.dp)
-                                        .height(40.dp)
+                                        .width((75 * scale).dp)
+                                        .height((40 * scale).dp)
                                         .background(if (isSystemInDarkTheme()) MaterialTheme.colorScheme.secondaryContainer else MediumTeal)
                                         .clickable {
                                             editingMonthIndex = monthIdx
@@ -1286,7 +1292,7 @@ fun StudentsTab(viewModel: QuranViewModel) {
                                             text = monthLabel,
                                             color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSecondaryContainer else Color.White,
                                             fontWeight = FontWeight.Bold,
-                                            fontSize = 13.sp,
+                                            fontSize = (13 * scale).sp,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis,
                                             modifier = Modifier.weight(1f),
@@ -1296,7 +1302,7 @@ fun StudentsTab(viewModel: QuranViewModel) {
                                             imageVector = Icons.Filled.Edit,
                                             contentDescription = "تعديل الشهر",
                                             tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else GoldAccent,
-                                            modifier = Modifier.size(11.dp)
+                                            modifier = Modifier.size((11 * scale).dp)
                                         )
                                     }
                                 }
@@ -1311,10 +1317,10 @@ fun StudentsTab(viewModel: QuranViewModel) {
                             .weight(1f)
                             .padding(horizontal = 8.dp)
                     ) {
-                        // Student Names Column (Vertically scrollable only) - Increased 10% horizontally
+                        // Student Names Column (Vertically scrollable only) - Increased 20% horizontally & scaled
                         Column(
                             modifier = Modifier
-                                .width(132.dp)
+                                .width((158 * scale).dp)
                                 .verticalScroll(verticalScrollState)
                                 .background(MaterialTheme.colorScheme.surface)
                                 .border(1.dp, MaterialTheme.colorScheme.outlineVariant)
@@ -1322,7 +1328,7 @@ fun StudentsTab(viewModel: QuranViewModel) {
                             filteredAndSortedStudents.forEachIndexed { sIdx, student ->
                                 Box(
                                     modifier = Modifier
-                                        .size(width = 132.dp, height = 46.dp)
+                                        .size(width = (158 * scale).dp, height = (56 * scale).dp)
                                         .background(
                                             if (sIdx % 2 == 0) {
                                                 if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f) else LightTeal.copy(alpha = 0.2f)
@@ -1353,7 +1359,7 @@ fun StudentsTab(viewModel: QuranViewModel) {
                                             text = student.fullName,
                                             fontWeight = FontWeight.Bold,
                                             color = if (isSystemInDarkTheme()) LightText else DarkTeal,
-                                            fontSize = 13.sp,
+                                            fontSize = (13 * scale).sp,
                                             maxLines = 2,
                                             overflow = TextOverflow.Ellipsis,
                                             modifier = Modifier.weight(1f)
@@ -1362,7 +1368,7 @@ fun StudentsTab(viewModel: QuranViewModel) {
                                             imageVector = Icons.Filled.Edit,
                                             contentDescription = "تعديل",
                                             tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary.copy(alpha = 0.7f) else MediumTeal.copy(alpha = 0.5f),
-                                            modifier = Modifier.size(14.dp)
+                                            modifier = Modifier.size((14 * scale).dp)
                                         )
                                     }
                                 }
@@ -1381,14 +1387,14 @@ fun StudentsTab(viewModel: QuranViewModel) {
                             ) {
                                 for (monthIdx in 0..5) {
                                     Column(
-                                        modifier = Modifier.width(75.dp)
+                                        modifier = Modifier.width((75 * scale).dp)
                                     ) {
                                         filteredAndSortedStudents.forEachIndexed { sIdx, student ->
                                             val isPaid = draftPayments[student.id to monthIdx] ?: false
                                             Box(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .height(46.dp)
+                                                    .height((56 * scale).dp)
                                                     .background(
                                                         if (sIdx % 2 == 0) {
                                                             if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f) else LightTeal.copy(alpha = 0.1f)
@@ -1402,7 +1408,7 @@ fun StudentsTab(viewModel: QuranViewModel) {
                                                 IconButton(
                                                     onClick = { viewModel.toggleDraftPayment(student.id, monthIdx) },
                                                     modifier = Modifier
-                                                        .size(width = 30.dp, height = 26.dp)
+                                                        .size(width = (30 * scale).dp, height = (26 * scale).dp)
                                                         .clip(RoundedCornerShape(6.dp))
                                                     .background(
                                                         if (isPaid) {
@@ -1426,7 +1432,7 @@ fun StudentsTab(viewModel: QuranViewModel) {
                                                             imageVector = Icons.Filled.Check,
                                                             contentDescription = "تم الدفع",
                                                             tint = Color.White,
-                                                            modifier = Modifier.size(16.dp)
+                                                            modifier = Modifier.size((16 * scale).dp)
                                                         )
                                                     }
                                                 }
@@ -1477,12 +1483,12 @@ fun StudentsTab(viewModel: QuranViewModel) {
                         Box(
                             modifier = Modifier
                                 .size(8.dp)
-                                .background(if (hasUnsavedChanges) Color.Red else GreenSuccess, shape = CircleShape)
+                                .background(if (hasUnsavedChanges) Color(0xFFEF5350) else GreenSuccess, shape = CircleShape)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = if (hasUnsavedChanges) "التعديلات غير مثبتة" else "التعديلات مثبتة",
-                            color = if (hasUnsavedChanges) Color.Red else GreenSuccess,
+                            color = if (hasUnsavedChanges) Color(0xFFEF5350) else GreenSuccess,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -2295,6 +2301,83 @@ fun PasswordTab(viewModel: QuranViewModel) {
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun ZoomControls(viewModel: QuranViewModel) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 4.dp)
+            .background(
+                color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f) else LightTeal.copy(alpha = 0.15f),
+                shape = RoundedCornerShape(8.dp)
+            )
+            .padding(horizontal = 12.dp, vertical = 6.dp)
+    ) {
+        Text(
+            text = "🔍 تكبير وتصغير لمساعدة ضعاف النظر:",
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            color = if (isSystemInDarkTheme()) LightText else DarkTeal
+        )
+        Spacer(modifier = Modifier.weight(1f))
+        
+        // Minus Button
+        IconButton(
+            onClick = {
+                if (viewModel.tableZoomScale > 0.85f) {
+                    viewModel.tableZoomScale -= 0.1f
+                }
+            },
+            modifier = Modifier.size(28.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Remove,
+                contentDescription = "تصغير",
+                tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        
+        // Percent Text
+        Text(
+            text = "${(viewModel.tableZoomScale * 100).toInt()}%",
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurface else DarkTeal
+        )
+        
+        // Plus Button
+        IconButton(
+            onClick = {
+                if (viewModel.tableZoomScale < 1.45f) {
+                    viewModel.tableZoomScale += 0.1f
+                }
+            },
+            modifier = Modifier.size(28.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Add,
+                contentDescription = "تكبير",
+                tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        
+        // Reset Button
+        if (viewModel.tableZoomScale != 1.0f) {
+            TextButton(
+                onClick = { viewModel.tableZoomScale = 1.0f },
+                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp),
+                modifier = Modifier.height(28.dp)
+            ) {
+                Text("إعادة ضبط", fontSize = 11.sp, fontWeight = FontWeight.Bold)
             }
         }
     }

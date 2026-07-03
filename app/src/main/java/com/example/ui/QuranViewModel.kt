@@ -48,6 +48,7 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
         private set
     var draftStudents by mutableStateOf<List<StudentEntity>>(emptyList())
     var deletedStudentIds by mutableStateOf<Set<Int>>(emptySet())
+    var tableZoomScale by mutableStateOf(1.0f)
 
     // Password Management Fields
     var oldPasswordInput by mutableStateOf("")
@@ -429,7 +430,7 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
         draftHourHeaders = hourHeaders.value.associate { it.hourIndex to it.name }
         draftCells = appointmentCells.value.associate { (it.dayIndex to it.hourIndex) to it.content }
         viewModelScope.launch {
-            _uiEvent.emit("تم التراجع عن تعديلات جدول المواعيد")
+            // Revert message removed per user request
         }
     }
 
@@ -439,7 +440,7 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
         draftStudents = students.value
         deletedStudentIds = emptySet()
         viewModelScope.launch {
-            _uiEvent.emit("تم التراجع عن تعديلات شؤون الطلاب والمدفوعات")
+            // Revert message removed per user request
         }
     }
 
