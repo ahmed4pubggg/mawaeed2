@@ -2971,25 +2971,46 @@ fun WheelPicker(
     val rangeSize = rangeList.size
     val virtualCount = Int.MAX_VALUE
     val middleOffset = virtualCount / 2
+    // We want the initial value to be centered. Since the center item is index firstVisibleItemIndex + 1,
+    // we want firstVisibleItemIndex to be startPosition - 1.
     val startPosition = middleOffset - (middleOffset % rangeSize) + rangeList.indexOf(value)
     
-    val lazyListState = rememberLazyListState(initialFirstVisibleItemIndex = startPosition)
+    val lazyListState = rememberLazyListState(initialFirstVisibleItemIndex = startPosition - 1)
     val snapFlingBehavior = rememberSnapFlingBehavior(lazyListState)
     val itemHeight = 45.dp
     
-    LaunchedEffect(lazyListState) {
-        snapshotFlow { lazyListState.firstVisibleItemIndex }
-            .collect { firstIndex ->
-                val centerIndex = firstIndex + 1
-                val mappedIndex = centerIndex % rangeSize
-                val selectedVal = rangeList[mappedIndex]
-                if (selectedVal != value) {
-                    onValueChange(selectedVal)
-                    try {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    } catch (e: Exception) {}
-                }
+    // Smoothly update the parent value only when the scroll has fully stopped!
+    LaunchedEffect(lazyListState.isScrollInProgress) {
+        if (!lazyListState.isScrollInProgress) {
+            val centerIndex = lazyListState.firstVisibleItemIndex + 1
+            val mappedIndex = centerIndex % rangeSize
+            val selectedVal = rangeList[mappedIndex]
+            if (selectedVal != value) {
+                onValueChange(selectedVal)
+                try {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                } catch (e: Exception) {}
             }
+        }
+    }
+    
+    // Also, if the parent value changes externally, scroll to it (if not currently scrolling)
+    LaunchedEffect(value) {
+        if (!lazyListState.isScrollInProgress) {
+            val centerIndex = lazyListState.firstVisibleItemIndex + 1
+            val mappedIndex = centerIndex % rangeSize
+            val selectedVal = rangeList[mappedIndex]
+            if (selectedVal != value) {
+                val diff = rangeList.indexOf(value) - mappedIndex
+                val shortestDiff = when {
+                    diff > rangeSize / 2 -> diff - rangeSize
+                    diff < -rangeSize / 2 -> diff + rangeSize
+                    else -> diff
+                }
+                val targetIndex = lazyListState.firstVisibleItemIndex + shortestDiff
+                lazyListState.scrollToItem(targetIndex)
+            }
+        }
     }
     
     Box(
@@ -3025,7 +3046,9 @@ fun WheelPicker(
             ) { globalIndex ->
                 val localIndex = globalIndex % rangeSize
                 val itemVal = rangeList[localIndex]
-                val isSelected = itemVal == value
+                
+                // Real-time local highlight based on currently scrolled center item
+                val isSelected = globalIndex == lazyListState.firstVisibleItemIndex + 1
                 
                 Box(
                     modifier = Modifier
@@ -3060,23 +3083,40 @@ fun SwipePeriodPicker(
     val middleOffset = virtualCount / 2
     val startPosition = middleOffset - (middleOffset % 2) + selectedIndex
     
-    val lazyListState = rememberLazyListState(initialFirstVisibleItemIndex = startPosition)
+    val lazyListState = rememberLazyListState(initialFirstVisibleItemIndex = startPosition - 1)
     val snapFlingBehavior = rememberSnapFlingBehavior(lazyListState)
     val itemHeight = 45.dp
     
-    LaunchedEffect(lazyListState) {
-        snapshotFlow { lazyListState.firstVisibleItemIndex }
-            .collect { firstIndex ->
-                val centerIndex = firstIndex + 1
-                val mappedIndex = centerIndex % 2
-                val selectedAm = mappedIndex == 1
-                if (selectedAm != isAm) {
-                    onValueChange(selectedAm)
-                    try {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    } catch (e: Exception) {}
-                }
+    // Smoothly update the parent value only when the scroll has fully stopped!
+    LaunchedEffect(lazyListState.isScrollInProgress) {
+        if (!lazyListState.isScrollInProgress) {
+            val centerIndex = lazyListState.firstVisibleItemIndex + 1
+            val mappedIndex = centerIndex % 2
+            val selectedAm = mappedIndex == 1
+            if (selectedAm != isAm) {
+                onValueChange(selectedAm)
+                try {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                } catch (e: Exception) {}
             }
+        }
+    }
+    
+    // Also, if the parent value changes externally, scroll to it (if not currently scrolling)
+    LaunchedEffect(isAm) {
+        if (!lazyListState.isScrollInProgress) {
+            val centerIndex = lazyListState.firstVisibleItemIndex + 1
+            val mappedIndex = centerIndex % 2
+            val selectedAm = mappedIndex == 1
+            if (selectedAm != isAm) {
+                val targetIndex = if (isAm) {
+                    if (mappedIndex == 0) lazyListState.firstVisibleItemIndex + 1 else lazyListState.firstVisibleItemIndex - 1
+                } else {
+                    if (mappedIndex == 1) lazyListState.firstVisibleItemIndex + 1 else lazyListState.firstVisibleItemIndex - 1
+                }
+                lazyListState.scrollToItem(targetIndex)
+            }
+        }
     }
     
     Box(
@@ -3111,8 +3151,9 @@ fun SwipePeriodPicker(
             ) { globalIndex ->
                 val localIndex = globalIndex % 2
                 val itemVal = options[localIndex]
-                val itemAm = localIndex == 1
-                val isSelected = itemAm == isAm
+                
+                // Real-time local highlight based on currently scrolled center item
+                val isSelected = globalIndex == lazyListState.firstVisibleItemIndex + 1
                 
                 Box(
                     modifier = Modifier

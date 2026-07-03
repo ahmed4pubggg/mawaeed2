@@ -279,7 +279,7 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
                     cellEntities
                 )
 
-                _uiEvent.emit("تم تثبيت المواعيد وإعدادات المنبه بنجاح 💾")
+                // Success toast removed per user request
             } catch (e: Exception) {
                 _uiEvent.emit("حدث خطأ أثناء حفظ المواعيد: ${e.localizedMessage}")
             }
@@ -506,9 +506,7 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
         draftAlarmEnabled = alarmEnabled
         draftAlarmRingtoneUri = alarmRingtoneUri
         draftAlarmTimes = alarmTimes
-        viewModelScope.launch {
-            _uiEvent.emit("تم التراجع عن التعديلات وإعادتها لحالتها المحفوظة")
-        }
+        // Revert message removed per user request
     }
 
     fun revertNamesAndPayments() {

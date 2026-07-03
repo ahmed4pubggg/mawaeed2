@@ -35,6 +35,8 @@ import com.example.ui.theme.MyApplicationTheme
 class AlarmActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        
         // Show over lockscreen and wake screen up
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true)
@@ -54,7 +56,6 @@ class AlarmActivity : ComponentActivity() {
             keyguardManager?.requestDismissKeyguard(this, null)
         }
         
-        super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
         val appointmentText = intent.getStringExtra("appointment_text") ?: "حصة قرآنية"
@@ -196,14 +197,12 @@ fun AlarmScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Elegant Card showing detail of slot
+            // Elegant Card showing detail of slot - styled with high contrast deep background and enlarged text
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.15f)),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF072422).copy(alpha = 0.95f)),
                 shape = RoundedCornerShape(24.dp),
-                border = CardDefaults.outlinedCardBorder().copy(
-                    brush = Brush.linearGradient(listOf(GoldAccent, Color.Transparent))
-                )
+                border = BorderStroke(2.5.dp, GoldAccent)
             ) {
                 Column(
                     modifier = Modifier
@@ -213,20 +212,24 @@ fun AlarmScreen(
                 ) {
                     Text(
                         text = "يوم $day • الساعة $formattedTime",
-                        style = MaterialTheme.typography.titleMedium.copy(
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontSize = 21.sp,
                             color = GoldAccent,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 0.5.sp
                         ),
                         textAlign = TextAlign.Center
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
                     Text(
                         text = text,
-                        style = MaterialTheme.typography.headlineSmall.copy(
+                        style = MaterialTheme.typography.headlineLarge.copy(
+                            fontSize = 30.sp,
                             color = Color.White,
-                            fontWeight = FontWeight.ExtraBold
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 0.5.sp
                         ),
                         textAlign = TextAlign.Center
                     )
