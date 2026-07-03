@@ -2652,6 +2652,86 @@ fun AlarmSettingsDialog(
                     )
                 }
 
+                // Draw over other apps permission check
+                val hasOverlayPermission = remember(context) {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                        android.provider.Settings.canDrawOverlays(context)
+                    } else {
+                        true
+                    }
+                }
+                
+                var overlayGranted by remember { mutableStateOf(hasOverlayPermission) }
+                
+                // Re-check periodically when the composable updates
+                LaunchedEffect(Unit) {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                        overlayGranted = android.provider.Settings.canDrawOverlays(context)
+                    }
+                }
+
+                if (viewModel.draftAlarmEnabled && !overlayGranted) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                color = if (isSystemInDarkTheme()) Color(0xFF3E2723) else Color(0xFFFFF9C4),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            .border(
+                                width = 1.5.dp,
+                                color = if (isSystemInDarkTheme()) Color(0xFFFFD54F) else Color(0xFFFBC02D),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            .padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalAlignment = Alignment.End
+                    ) {
+                        Text(
+                            text = "⚠️ تنبيه هام لمنع عدم ظهور المنبه:",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            color = if (isSystemInDarkTheme()) Color(0xFFFFE082) else Color(0xFF5D4037),
+                            textAlign = TextAlign.Right,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Text(
+                            text = "نظام الأندرويد يتطلب تفعيل صلاحية 'الظهور فوق التطبيقات الأخرى' لتتمكن شاشة المنبه من الظهور والعمل فوراً عندما تكون شاشة الهاتف مغلقة أو خارج التطبيق.",
+                            fontSize = 12.sp,
+                            color = if (isSystemInDarkTheme()) Color(0xFFD7CCC8) else Color(0xFF5D4037),
+                            textAlign = TextAlign.Right,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        
+                        Button(
+                            onClick = {
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                                    try {
+                                        val intent = Intent(
+                                            android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                            Uri.parse("package:${context.packageName}")
+                                        )
+                                        context.startActivity(intent)
+                                    } catch (e: Exception) {
+                                        try {
+                                            val intent = Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+                                            context.startActivity(intent)
+                                        } catch (ex: Exception) {}
+                                    }
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isSystemInDarkTheme()) Color(0xFFFFD54F) else Color(0xFFFBC02D),
+                                contentColor = if (isSystemInDarkTheme()) Color(0xFF3E2723) else Color(0xFF5D4037)
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.align(Alignment.Start)
+                        ) {
+                            Text("منح الصلاحية الآن 🔐", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
                 // Custom Ringtone Selector
                 if (viewModel.draftAlarmEnabled) {
                     Column(

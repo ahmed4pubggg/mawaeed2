@@ -145,9 +145,9 @@ fun AlarmScreen(
             .background(
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        DarkTeal,
-                        MediumTeal,
-                        LightTeal.copy(alpha = 0.8f)
+                        Color(0xFF031412), // Extremely deep pine night
+                        Color(0xFF092C28), // Deep rich pine teal
+                        Color(0xFF031412)  // Back to extremely deep pine
                     )
                 )
             ),
@@ -177,7 +177,7 @@ fun AlarmScreen(
                     Icon(
                         imageVector = Icons.Filled.Alarm,
                         contentDescription = "المنبه",
-                        tint = DarkTeal,
+                        tint = Color(0xFF031412),
                         modifier = Modifier.size(48.dp)
                     )
                 }
@@ -200,7 +200,7 @@ fun AlarmScreen(
             // Elegant Card showing detail of slot - styled with high contrast deep background and enlarged text
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF072422).copy(alpha = 0.95f)),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF051C1A).copy(alpha = 0.95f)),
                 shape = RoundedCornerShape(24.dp),
                 border = BorderStroke(2.5.dp, GoldAccent)
             ) {
@@ -213,8 +213,8 @@ fun AlarmScreen(
                     Text(
                         text = "يوم $day • الساعة $formattedTime",
                         style = MaterialTheme.typography.titleLarge.copy(
-                            fontSize = 21.sp,
-                            color = GoldAccent,
+                            fontSize = 22.sp,
+                            color = Color(0xFFFFD54F), // High-visibility bright yellow-gold
                             fontWeight = FontWeight.ExtraBold,
                             letterSpacing = 0.5.sp
                         ),
@@ -226,7 +226,7 @@ fun AlarmScreen(
                     Text(
                         text = text,
                         style = MaterialTheme.typography.headlineLarge.copy(
-                            fontSize = 30.sp,
+                            fontSize = 32.sp,
                             color = Color.White,
                             fontWeight = FontWeight.Black,
                             letterSpacing = 0.5.sp
@@ -243,18 +243,19 @@ fun AlarmScreen(
                 onClick = onStop,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = GoldAccent,
-                    contentColor = DarkTeal
+                    contentColor = Color(0xFF031412)
                 ),
                 elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp),
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(24.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(58.dp)
+                    .height(60.dp)
             ) {
                 Text(
                     text = "إِيقَاف التَّنْبِيه",
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.ExtraBold,
+                        fontSize = 18.sp,
                         letterSpacing = 1.sp
                     )
                 )
@@ -263,34 +264,37 @@ fun AlarmScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Snooze Button
-            OutlinedButton(
+            Button(
                 onClick = onSnooze,
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = GoldAccent
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF80CBC4), // Beautiful mint green
+                    contentColor = Color(0xFF031412)  // Contrast text color
                 ),
-                border = BorderStroke(2.dp, GoldAccent),
-                shape = RoundedCornerShape(20.dp),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 6.dp),
+                shape = RoundedCornerShape(24.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(58.dp)
+                    .height(60.dp)
             ) {
                 Text(
                     text = "تَأْجِيل (10 دَقَائِق)",
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold,
+                        fontSize = 17.sp,
                         letterSpacing = 1.sp
                     )
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(28.dp))
 
             // Rights Credit Label
             Text(
                 text = "بواسطة الشيخ أحمد النمس غفر الله له",
-                style = MaterialTheme.typography.bodySmall.copy(
-                    color = Color.White.copy(alpha = 0.7f),
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    color = Color(0xFFFFECB3), // Warm light gold
                     fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
                     letterSpacing = 0.5.sp
                 ),
                 textAlign = TextAlign.Center
