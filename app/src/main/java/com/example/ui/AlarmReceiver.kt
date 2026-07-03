@@ -17,6 +17,18 @@ class AlarmReceiver : BroadcastReceiver() {
         val appointmentTime = intent.getStringExtra("appointment_time") ?: ""
         val ringtoneUri = intent.getStringExtra("ringtone_uri") ?: ""
 
+        // Acquire a WakeLock to keep the CPU awake while starting the activity
+        try {
+            val powerManager = context.getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
+            val wakeLock = powerManager?.newWakeLock(
+                android.os.PowerManager.PARTIAL_WAKE_LOCK,
+                "QuranApp::AlarmWakeLock"
+            )
+            wakeLock?.acquire(10000L /* 10 seconds */)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
         // Launch full-screen alarm activity
         val activityIntent = Intent(context, AlarmActivity::class.java).apply {
             putExtra("appointment_text", appointmentText)
@@ -46,6 +58,8 @@ class AlarmReceiver : BroadcastReceiver() {
                 enableLights(true)
                 lightColor = Color.GREEN
                 enableVibration(true)
+                lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
+                setBypassDnd(true)
             }
             notificationManager.createNotificationChannel(channel)
         }
@@ -64,6 +78,7 @@ class AlarmReceiver : BroadcastReceiver() {
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setAutoCancel(true)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setFullScreenIntent(pendingIntent, true)
             .setContentIntent(pendingIntent)
             .build()

@@ -30,6 +30,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.runtime.saveable.rememberSaveable
 import com.example.R
 import com.example.data.StudentEntity
 import com.example.ui.theme.*
@@ -309,8 +319,8 @@ fun LoginScreen(viewModel: QuranViewModel) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainAppScreen(viewModel: QuranViewModel) {
-    var selectedTab by remember { mutableStateOf(0) }
-    var showLogoutDialog by remember { mutableStateOf(false) }
+    var selectedTab by rememberSaveable { mutableStateOf(0) }
+    var showLogoutDialog by rememberSaveable { mutableStateOf(false) }
 
     val tabs = listOf(
         "جدول المواعيد" to Icons.Filled.CalendarMonth,
@@ -581,12 +591,12 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
     val scale = viewModel.tableZoomScale
 
     // State for editing dialogs
-    var editingHeaderIndex by remember { mutableStateOf<Int?>(null) }
-    var editingHeaderCurrentValue by remember { mutableStateOf("") }
+    var editingHeaderIndex by rememberSaveable { mutableStateOf<Int?>(null) }
+    var editingHeaderCurrentValue by rememberSaveable { mutableStateOf("") }
 
-    var editingCellDayIdx by remember { mutableStateOf<Int?>(null) }
-    var editingCellHourIdx by remember { mutableStateOf<Int?>(null) }
-    var editingCellCurrentValue by remember { mutableStateOf("") }
+    var editingCellDayIdx by rememberSaveable { mutableStateOf<Int?>(null) }
+    var editingCellHourIdx by rememberSaveable { mutableStateOf<Int?>(null) }
+    var editingCellCurrentValue by rememberSaveable { mutableStateOf("") }
 
     val horizontalScrollState = rememberScrollState()
     val verticalScrollState = rememberScrollState()
@@ -901,7 +911,8 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
                     Column(
                         modifier = Modifier
                             .padding(16.dp)
-                            .fillMaxWidth(),
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState()),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
@@ -972,7 +983,8 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
                     Column(
                         modifier = Modifier
                             .padding(16.dp)
-                            .fillMaxWidth(),
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState()),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
@@ -1067,8 +1079,8 @@ fun StudentsTab(viewModel: QuranViewModel) {
     val scale = viewModel.tableZoomScale
 
     // Search and Sort states
-    var searchQuery by remember { mutableStateOf("") }
-    var sortType by remember { mutableStateOf(StudentSortType.ALPHA_ASC) }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    var sortType by rememberSaveable { mutableStateOf(StudentSortType.ALPHA_ASC) }
 
     // Filtered and sorted student list
     val filteredAndSortedStudents = remember(draftStudents, searchQuery, sortType) {
@@ -1087,19 +1099,22 @@ fun StudentsTab(viewModel: QuranViewModel) {
     }
 
     // Edit/Add dialog states
-    var isAddingStudent by remember { mutableStateOf(false) }
-    var addStudentInput by remember { mutableStateOf("") }
+    var isAddingStudent by rememberSaveable { mutableStateOf(false) }
+    var addStudentInput by rememberSaveable { mutableStateOf("") }
 
-    var editingStudentEntity by remember { mutableStateOf<StudentEntity?>(null) }
-    var editingStudentInput by remember { mutableStateOf("") }
+    var editingStudentId by rememberSaveable { mutableStateOf<Int?>(null) }
+    val editingStudentEntity = remember(editingStudentId, draftStudents) {
+        draftStudents.find { it.id == editingStudentId }
+    }
+    var editingStudentInput by rememberSaveable { mutableStateOf("") }
 
-    var editingMonthIndex by remember { mutableStateOf<Int?>(null) }
-    var editingMonthCurrentValue by remember { mutableStateOf("") }
+    var editingMonthIndex by rememberSaveable { mutableStateOf<Int?>(null) }
+    var editingMonthCurrentValue by rememberSaveable { mutableStateOf("") }
 
     // Password verification states for saving payments
-    var isConfirmingPaymentsWithPassword by remember { mutableStateOf(false) }
-    var confirmPasswordInput by remember { mutableStateOf("") }
-    var confirmPasswordError by remember { mutableStateOf<String?>(null) }
+    var isConfirmingPaymentsWithPassword by rememberSaveable { mutableStateOf(false) }
+    var confirmPasswordInput by rememberSaveable { mutableStateOf("") }
+    var confirmPasswordError by rememberSaveable { mutableStateOf<String?>(null) }
 
     val horizontalScrollState = rememberScrollState()
     val verticalScrollState = rememberScrollState()
@@ -1434,11 +1449,11 @@ fun StudentsTab(viewModel: QuranViewModel) {
                                         )
                                         .combinedClickable(
                                             onClick = {
-                                                editingStudentEntity = student
+                                                editingStudentId = student.id
                                                 editingStudentInput = student.fullName
                                             },
                                             onLongClick = {
-                                                editingStudentEntity = student
+                                                editingStudentId = student.id
                                                 editingStudentInput = student.fullName
                                             }
                                         )
@@ -1650,7 +1665,8 @@ fun StudentsTab(viewModel: QuranViewModel) {
                     Column(
                         modifier = Modifier
                             .padding(16.dp)
-                            .fillMaxWidth(),
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState()),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
@@ -1710,7 +1726,7 @@ fun StudentsTab(viewModel: QuranViewModel) {
 
         // 2. Edit Student Dialog
         editingStudentEntity?.let { student ->
-            Dialog(onDismissRequest = { editingStudentEntity = null }) {
+            Dialog(onDismissRequest = { editingStudentId = null }) {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1720,7 +1736,8 @@ fun StudentsTab(viewModel: QuranViewModel) {
                     Column(
                         modifier = Modifier
                             .padding(16.dp)
-                            .fillMaxWidth(),
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState()),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
@@ -1754,7 +1771,7 @@ fun StudentsTab(viewModel: QuranViewModel) {
                             IconButton(
                                 onClick = {
                                     viewModel.deleteStudent(student.id, student.fullName)
-                                    editingStudentEntity = null
+                                    editingStudentId = null
                                 },
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(8.dp))
@@ -1768,14 +1785,14 @@ fun StudentsTab(viewModel: QuranViewModel) {
                             }
 
                             Row {
-                                TextButton(onClick = { editingStudentEntity = null }) {
+                                TextButton(onClick = { editingStudentId = null }) {
                                     Text("إلغاء")
                                 }
                                 Button(
                                     onClick = {
                                         if (editingStudentInput.trim().isNotEmpty()) {
                                             viewModel.updateStudentName(student.id, editingStudentInput)
-                                            editingStudentEntity = null
+                                            editingStudentId = null
                                         }
                                     },
                                     colors = ButtonDefaults.buttonColors(
@@ -2404,7 +2421,7 @@ fun PasswordTab(viewModel: QuranViewModel) {
 
 @Composable
 fun ZoomControls(viewModel: QuranViewModel) {
-    var showAlarmSettings by remember { mutableStateOf(false) }
+    var showAlarmSettings by rememberSaveable { mutableStateOf(false) }
 
     if (showAlarmSettings) {
         AlarmSettingsDialog(viewModel = viewModel, onDismiss = { showAlarmSettings = false })
@@ -2507,6 +2524,21 @@ fun AlarmSettingsDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+    var editingTimeIndex by rememberSaveable { mutableStateOf<Int?>(null) }
+
+    if (editingTimeIndex != null) {
+        val timeIndex = editingTimeIndex!!
+        val timeStr = viewModel.alarmTimes[timeIndex] ?: "12:00"
+        ComposeTimePickerDialog(
+            initialTimeStr = timeStr,
+            onDismiss = { editingTimeIndex = null },
+            onConfirm = { selectedTime ->
+                viewModel.updateAlarmTime(context, timeIndex, selectedTime)
+                editingTimeIndex = null
+            }
+        )
+    }
+
     val ringtoneLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -2668,19 +2700,7 @@ fun AlarmSettingsDialog(
                                 // Time selector button
                                 TextButton(
                                     onClick = {
-                                        val parts = timeStr.split(":")
-                                        val curHour = parts.getOrNull(0)?.toIntOrNull() ?: 12
-                                        val curMinute = parts.getOrNull(1)?.toIntOrNull() ?: 0
-                                        android.app.TimePickerDialog(
-                                            context,
-                                            { _, hourOfDay, minute ->
-                                                val selectedTime = String.format("%02d:%02d", hourOfDay, minute)
-                                                viewModel.updateAlarmTime(context, h, selectedTime)
-                                            },
-                                            curHour,
-                                            curMinute,
-                                            false // friendly am-pm dial on device
-                                        ).show()
+                                        editingTimeIndex = h
                                     },
                                     colors = ButtonDefaults.textButtonColors(
                                         contentColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal
@@ -2744,4 +2764,476 @@ fun AlarmSettingsDialog(
             }
         }
     )
+}
+
+@Composable
+fun ComposeTimePickerDialog(
+    initialTimeStr: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    val parts = initialTimeStr.split(":")
+    val initialHour24 = parts.getOrNull(0)?.toIntOrNull() ?: 12
+    val initialMinute = parts.getOrNull(1)?.toIntOrNull() ?: 0
+    
+    val initialIsAm = initialHour24 < 12
+    val initialHour12 = when {
+        initialHour24 == 0 -> 12
+        initialHour24 > 12 -> initialHour24 - 12
+        else -> initialHour24
+    }
+    
+    var hour12 by remember { mutableStateOf(initialHour12) }
+    var minute by remember { mutableStateOf(initialMinute) }
+    var isAm by remember { mutableStateOf(initialIsAm) }
+    
+    val isDark = isSystemInDarkTheme()
+    // Elegant colors from the palette:
+    // Hour Color: Gold
+    val hourColor = if (isDark) GoldAccent80 else DeepGold
+    // Minute Color: Cyan/Teal
+    val minuteColor = if (isDark) CyanPrimary else MediumTeal
+    // AM/PM Color: Warm/Contrast Mint
+    val periodColor = if (isDark) MintGreen80 else DarkTeal
+    
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = if (isDark) PineSurface else Color.White
+            )
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Title
+                Text(
+                    text = "ضبط توقيت التنبيه",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = if (isDark) MaterialTheme.colorScheme.primary else DarkTeal
+                )
+                
+                // Digital Wheels display
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // AM/PM Picker
+                    SwipePeriodPicker(
+                        isAm = isAm,
+                        onValueChange = { isAm = it },
+                        color = periodColor
+                    )
+                    
+                    Spacer(modifier = Modifier.width(16.dp))
+                    
+                    // Minutes Picker
+                    SwipeWheelPicker(
+                        value = minute,
+                        range = 0..59,
+                        onValueChange = { minute = it },
+                        color = minuteColor,
+                        labelFormatter = { String.format("%02d", it) }
+                    )
+                    
+                    Text(
+                        text = ":",
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = if (isDark) Color.White else Color.Black,
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
+                    
+                    // Hours Picker
+                    SwipeWheelPicker(
+                        value = hour12,
+                        range = 1..12,
+                        onValueChange = { hour12 = it },
+                        color = hourColor,
+                        labelFormatter = { it.toString() }
+                    )
+                }
+                
+                // Dial Clock
+                AnalogClockPicker(
+                    hour12 = hour12,
+                    minute = minute,
+                    isAm = isAm,
+                    onTimeChange = { h, m ->
+                        hour12 = h
+                        minute = m
+                    },
+                    hourColor = hourColor,
+                    minuteColor = minuteColor,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+                
+                // Dialog Actions (Buttons)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    TextButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            text = "إلغاء",
+                            color = if (isDark) Color.LightGray else Color.Gray,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    
+                    Button(
+                        onClick = {
+                            // Convert 12h and am/pm back to 24h
+                            val h24 = when {
+                                isAm && hour12 == 12 -> 0
+                                !isAm && hour12 < 12 -> hour12 + 12
+                                else -> hour12
+                            }
+                            val formattedTime = String.format("%02d:%02d", h24, minute)
+                            onConfirm(formattedTime)
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isDark) MaterialTheme.colorScheme.primary else DarkTeal,
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            text = "موافق",
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SwipeWheelPicker(
+    value: Int,
+    range: IntRange,
+    onValueChange: (Int) -> Unit,
+    color: Color,
+    labelFormatter: (Int) -> String = { String.format("%02d", it) },
+    modifier: Modifier = Modifier
+) {
+    var dragAccumulator by remember { mutableStateOf(0f) }
+    
+    val prevValue = if (value == range.first) range.last else value - 1
+    val nextValue = if (value == range.last) range.first else value + 1
+    
+    Column(
+        modifier = modifier
+            .width(60.dp)
+            .height(130.dp)
+            .pointerInput(Unit) {
+                detectVerticalDragGestures(
+                    onDragStart = { dragAccumulator = 0f },
+                    onDragEnd = { dragAccumulator = 0f },
+                    onDragCancel = { dragAccumulator = 0f },
+                    onVerticalDrag = { change, dragAmount ->
+                        change.consume()
+                        dragAccumulator += dragAmount
+                        val threshold = 35f
+                        if (dragAccumulator > threshold) {
+                            val newVal = if (value == range.first) range.last else value - 1
+                            onValueChange(newVal)
+                            dragAccumulator = 0f
+                        } else if (dragAccumulator < -threshold) {
+                            val newVal = if (value == range.last) range.first else value + 1
+                            onValueChange(newVal)
+                            dragAccumulator = 0f
+                        }
+                    }
+                )
+            },
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = labelFormatter(prevValue),
+            color = color.copy(alpha = 0.35f),
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Normal,
+            modifier = Modifier.clickable { onValueChange(prevValue) }
+        )
+        
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp)
+                .background(
+                    color = color.copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(8.dp)
+                )
+                .border(
+                    width = 1.dp,
+                    color = color.copy(alpha = 0.4f),
+                    shape = RoundedCornerShape(8.dp)
+                )
+                .padding(vertical = 8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = labelFormatter(value),
+                color = color,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.ExtraBold
+            )
+        }
+        
+        Text(
+            text = labelFormatter(nextValue),
+            color = color.copy(alpha = 0.35f),
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Normal,
+            modifier = Modifier.clickable { onValueChange(nextValue) }
+        )
+    }
+}
+
+@Composable
+fun SwipePeriodPicker(
+    isAm: Boolean,
+    onValueChange: (Boolean) -> Unit,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    var dragAccumulator by remember { mutableStateOf(0f) }
+    
+    val valueStr = if (isAm) "ص" else "م"
+    val otherStr = if (isAm) "م" else "ص"
+    
+    Column(
+        modifier = modifier
+            .width(60.dp)
+            .height(130.dp)
+            .pointerInput(Unit) {
+                detectVerticalDragGestures(
+                    onDragStart = { dragAccumulator = 0f },
+                    onDragEnd = { dragAccumulator = 0f },
+                    onDragCancel = { dragAccumulator = 0f },
+                    onVerticalDrag = { change, dragAmount ->
+                        change.consume()
+                        dragAccumulator += dragAmount
+                        val threshold = 35f
+                        if (dragAccumulator > threshold || dragAccumulator < -threshold) {
+                            onValueChange(!isAm)
+                            dragAccumulator = 0f
+                        }
+                    }
+                )
+            },
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = otherStr,
+            color = color.copy(alpha = 0.35f),
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Normal,
+            modifier = Modifier.clickable { onValueChange(!isAm) }
+        )
+        
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp)
+                .background(
+                    color = color.copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(8.dp)
+                )
+                .border(
+                    width = 1.dp,
+                    color = color.copy(alpha = 0.4f),
+                    shape = RoundedCornerShape(8.dp)
+                )
+                .padding(vertical = 8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = valueStr,
+                color = color,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.ExtraBold
+            )
+        }
+        
+        Text(
+            text = otherStr,
+            color = color.copy(alpha = 0.35f),
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Normal,
+            modifier = Modifier.clickable { onValueChange(!isAm) }
+        )
+    }
+}
+
+@Composable
+fun AnalogClockPicker(
+    hour12: Int,
+    minute: Int,
+    isAm: Boolean,
+    onTimeChange: (Int, Int) -> Unit,
+    hourColor: Color,
+    minuteColor: Color,
+    modifier: Modifier = Modifier
+) {
+    var isDraggingHour by remember { mutableStateOf<Boolean?>(null) }
+    val textMeasurer = rememberTextMeasurer()
+    val isDark = isSystemInDarkTheme()
+    
+    Canvas(
+        modifier = modifier
+            .size(240.dp)
+            .pointerInput(Unit) {
+                detectDragGestures(
+                    onDragStart = { offset ->
+                        val cx = size.width / 2f
+                        val cy = size.height / 2f
+                        val dx = offset.x - cx
+                        val dy = offset.y - cy
+                        val distance = Math.hypot(dx.toDouble(), dy.toDouble()).toFloat()
+                        val maxRadius = size.width / 2f
+                        isDraggingHour = distance < maxRadius * 0.65f
+                    },
+                    onDragEnd = { isDraggingHour = null },
+                    onDragCancel = { isDraggingHour = null },
+                    onDrag = { change, dragAmount ->
+                        change.consume()
+                        val position = change.position
+                        val cx = size.width / 2f
+                        val cy = size.height / 2f
+                        val dx = position.x - cx
+                        val dy = position.y - cy
+                        
+                        var angleDegrees = Math.toDegrees(Math.atan2(dy.toDouble(), dx.toDouble())).toFloat() + 90f
+                        if (angleDegrees < 0) {
+                            angleDegrees += 360f
+                        }
+                        
+                        if (isDraggingHour == true) {
+                            val rawHour = (angleDegrees + 15f) / 30f
+                            var newHour = rawHour.toInt()
+                            if (newHour == 0) newHour = 12
+                            newHour = newHour.coerceIn(1, 12)
+                            onTimeChange(newHour, minute)
+                        } else if (isDraggingHour == false) {
+                            val rawMinute = (angleDegrees + 3f) / 6f
+                            val newMinute = (rawMinute.toInt()) % 60
+                            onTimeChange(hour12, newMinute)
+                        }
+                    }
+                )
+            }
+    ) {
+        val cx = size.width / 2f
+        val cy = size.height / 2f
+        val radius = size.width / 2f
+        
+        drawCircle(
+            color = if (isDark) Color(0xFF1F2937) else Color(0xFFECEFF1),
+            radius = radius,
+            center = Offset(cx, cy)
+        )
+        drawCircle(
+            color = if (isDark) Color(0xFF374151) else Color(0xFFCFD8DC),
+            radius = radius,
+            center = Offset(cx, cy),
+            style = Stroke(width = 2.dp.toPx())
+        )
+        
+        drawCircle(
+            color = if (isDark) Color.White else Color(0xFF374151),
+            radius = 6.dp.toPx(),
+            center = Offset(cx, cy)
+        )
+        
+        val arabicHours = listOf("١٢", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩", "١٠", "١١")
+        for (i in 0..11) {
+            val angleRad = Math.toRadians((i * 30 - 90).toDouble())
+            val numRadius = radius * 0.75f
+            val nx = cx + (numRadius * Math.cos(angleRad)).toFloat()
+            val ny = cy + (numRadius * Math.sin(angleRad)).toFloat()
+            
+            val textLayoutResult = textMeasurer.measure(
+                text = arabicHours[i],
+                style = TextStyle(
+                    color = hourColor.copy(alpha = 0.9f),
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            )
+            
+            drawText(
+                textLayoutResult = textLayoutResult,
+                topLeft = Offset(nx - textLayoutResult.size.width / 2f, ny - textLayoutResult.size.height / 2f)
+            )
+        }
+        
+        for (m in 0..59) {
+            if (m % 5 != 0) {
+                val angleRad = Math.toRadians((m * 6 - 90).toDouble())
+                val dotRadius = radius * 0.9f
+                val dx = cx + (dotRadius * Math.cos(angleRad)).toFloat()
+                val dy = cy + (dotRadius * Math.sin(angleRad)).toFloat()
+                drawCircle(
+                    color = minuteColor.copy(alpha = 0.4f),
+                    radius = 2.dp.toPx(),
+                    center = Offset(dx, dy)
+                )
+            } else {
+                val angleRad = Math.toRadians((m * 6 - 90).toDouble())
+                val dotRadius = radius * 0.9f
+                val dx = cx + (dotRadius * Math.cos(angleRad)).toFloat()
+                val dy = cy + (dotRadius * Math.sin(angleRad)).toFloat()
+                drawCircle(
+                    color = minuteColor.copy(alpha = 0.8f),
+                    radius = 3.5.dp.toPx(),
+                    center = Offset(dx, dy)
+                )
+            }
+        }
+        
+        val hourAngleRad = Math.toRadians(((hour12 % 12) * 30 + (minute * 0.5) - 90))
+        val hourHandLength = radius * 0.5f
+        val hx = cx + (hourHandLength * Math.cos(hourAngleRad)).toFloat()
+        val hy = cy + (hourHandLength * Math.sin(hourAngleRad)).toFloat()
+        
+        drawLine(
+            color = hourColor,
+            start = Offset(cx, cy),
+            end = Offset(hx, hy),
+            strokeWidth = 5.dp.toPx(),
+            cap = StrokeCap.Round
+        )
+        
+        val minuteAngleRad = Math.toRadians((minute * 6 - 90).toDouble())
+        val minuteHandLength = radius * 0.8f
+        val mx = cx + (minuteHandLength * Math.cos(minuteAngleRad)).toFloat()
+        val my = cy + (minuteHandLength * Math.sin(minuteAngleRad)).toFloat()
+        
+        drawLine(
+            color = minuteColor,
+            start = Offset(cx, cy),
+            end = Offset(mx, my),
+            strokeWidth = 3.dp.toPx(),
+            cap = StrokeCap.Round
+        )
+    }
 }
