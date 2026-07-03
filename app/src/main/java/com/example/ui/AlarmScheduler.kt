@@ -72,14 +72,21 @@ object AlarmScheduler {
                         val alarmMinute = parts[1].toIntOrNull() ?: 0
 
                         val calendar = Calendar.getInstance().apply {
-                            set(Calendar.DAY_OF_WEEK, mapDayIndexToCalendar(d))
                             set(Calendar.HOUR_OF_DAY, alarmHour)
                             set(Calendar.MINUTE, alarmMinute)
                             set(Calendar.SECOND, 0)
                             set(Calendar.MILLISECOND, 0)
 
+                            val currentCalDay = get(Calendar.DAY_OF_WEEK)
+                            val targetCalDay = mapDayIndexToCalendar(d)
+                            var daysDiff = targetCalDay - currentCalDay
+                            if (daysDiff < 0) {
+                                daysDiff += 7
+                            }
+                            add(Calendar.DAY_OF_YEAR, daysDiff)
+
                             if (timeInMillis <= System.currentTimeMillis()) {
-                                add(Calendar.WEEK_OF_YEAR, 1)
+                                add(Calendar.DAY_OF_YEAR, 7)
                             }
                         }
 

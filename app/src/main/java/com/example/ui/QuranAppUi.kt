@@ -463,7 +463,7 @@ fun MainAppScreen(viewModel: QuranViewModel) {
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "بواسطة الشيخ أحمد النمس حفظه الله",
+                        text = "بواسطة الشيخ أحمد النمس غفر الله له",
                         style = MaterialTheme.typography.bodySmall.copy(
                             color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
                             fontWeight = FontWeight.Bold,
@@ -541,7 +541,7 @@ fun MainAppScreen(viewModel: QuranViewModel) {
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "بواسطة الشيخ أحمد النمس حفظه الله",
+                            text = "بواسطة الشيخ أحمد النمس غفر الله له",
                             style = MaterialTheme.typography.bodySmall.copy(
                                 color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
                                 fontWeight = FontWeight.Bold
@@ -611,10 +611,25 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
     val dbHours = viewModel.hourHeaders.collectAsState().value
     val dbCells = viewModel.appointmentCells.collectAsState().value
 
-    val hasUnsavedChanges = remember(draftHourHeaders, draftCells, dbHours, dbCells) {
+    val hasUnsavedChanges = remember(
+        draftHourHeaders,
+        draftCells,
+        dbHours,
+        dbCells,
+        viewModel.draftAlarmEnabled,
+        viewModel.alarmEnabled,
+        viewModel.draftAlarmRingtoneUri,
+        viewModel.alarmRingtoneUri,
+        viewModel.draftAlarmTimes,
+        viewModel.alarmTimes
+    ) {
         val dbHoursMap = dbHours.associate { it.hourIndex to it.name }
         val dbCellsMap = dbCells.associate { (it.dayIndex to it.hourIndex) to it.content }
-        draftHourHeaders != dbHoursMap || draftCells != dbCellsMap
+        draftHourHeaders != dbHoursMap ||
+                draftCells != dbCellsMap ||
+                viewModel.draftAlarmEnabled != viewModel.alarmEnabled ||
+                viewModel.draftAlarmRingtoneUri != viewModel.alarmRingtoneUri ||
+                viewModel.draftAlarmTimes != viewModel.alarmTimes
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -1360,7 +1375,7 @@ fun StudentsTab(viewModel: QuranViewModel) {
                     }
                 }
             } else {
-                ZoomControls(viewModel = viewModel)
+                ZoomControls(viewModel = viewModel, showAlarmButton = false)
 
                 // Unified bidirectional scroll wrapper with Sticky Headers & Student Names Column
                 Column(
@@ -2446,10 +2461,10 @@ fun PasswordTab(viewModel: QuranViewModel) {
 }
 
 @Composable
-fun ZoomControls(viewModel: QuranViewModel) {
+fun ZoomControls(viewModel: QuranViewModel, showAlarmButton: Boolean = true) {
     var showAlarmSettings by rememberSaveable { mutableStateOf(false) }
 
-    if (showAlarmSettings) {
+    if (showAlarmSettings && showAlarmButton) {
         AlarmSettingsDialog(viewModel = viewModel, onDismiss = { showAlarmSettings = false })
     }
 
@@ -2475,16 +2490,18 @@ fun ZoomControls(viewModel: QuranViewModel) {
         Spacer(modifier = Modifier.width(4.dp))
 
         // Alarm Settings Trigger Button
-        IconButton(
-            onClick = { showAlarmSettings = true },
-            modifier = Modifier.size(28.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Notifications,
-                contentDescription = "إعدادات المنبه",
-                tint = if (viewModel.alarmEnabled) GoldAccent else (if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal),
-                modifier = Modifier.size(20.dp)
-            )
+        if (showAlarmButton) {
+            IconButton(
+                onClick = { showAlarmSettings = true },
+                modifier = Modifier.size(28.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Notifications,
+                    contentDescription = "إعدادات المنبه",
+                    tint = if (viewModel.alarmEnabled) GoldAccent else (if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
 
         Spacer(modifier = Modifier.weight(1f))
@@ -2554,7 +2571,7 @@ fun AlarmSettingsDialog(
 
     if (editingTimeIndex != null) {
         val timeIndex = editingTimeIndex!!
-        val timeStr = viewModel.alarmTimes[timeIndex] ?: "12:00"
+        val timeStr = viewModel.draftAlarmTimes[timeIndex] ?: "12:00"
         ComposeTimePickerDialog(
             initialTimeStr = timeStr,
             onDismiss = { editingTimeIndex = null },
@@ -2619,7 +2636,7 @@ fun AlarmSettingsDialog(
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
                     Switch(
-                        checked = viewModel.alarmEnabled,
+                        checked = viewModel.draftAlarmEnabled,
                         onCheckedChange = { viewModel.toggleAlarmEnabled(context, it) },
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
@@ -2636,7 +2653,7 @@ fun AlarmSettingsDialog(
                 }
 
                 // Custom Ringtone Selector
-                if (viewModel.alarmEnabled) {
+                if (viewModel.draftAlarmEnabled) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -2665,7 +2682,7 @@ fun AlarmSettingsDialog(
                                     val intent = Intent(android.media.RingtoneManager.ACTION_RINGTONE_PICKER).apply {
                                         putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_TYPE, android.media.RingtoneManager.TYPE_ALARM)
                                         putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_TITLE, "اختر نغمة التنبيه للحصص")
-                                        putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, viewModel.alarmRingtoneUri?.let { Uri.parse(it) })
+                                        putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, viewModel.draftAlarmRingtoneUri?.let { Uri.parse(it) })
                                         putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
                                         putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
                                     }
@@ -2683,7 +2700,7 @@ fun AlarmSettingsDialog(
                             Spacer(modifier = Modifier.weight(1f))
                             
                             Text(
-                                text = if (viewModel.alarmRingtoneUri != null) "تم اختيار نغمة مخصصة 🎵" else "النغمة الافتراضية للجهاز 🔔",
+                                text = if (viewModel.draftAlarmRingtoneUri != null) "تم اختيار نغمة مخصصة 🎵" else "النغمة الافتراضية للجهاز 🔔",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Medium,
                                 color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurface else DarkTeal
@@ -2706,7 +2723,7 @@ fun AlarmSettingsDialog(
                     ) {
                         for (h in 0..7) {
                             val colLabel = viewModel.draftHourHeaders[h] ?: "العمود ${h + 1}"
-                            val timeStr = viewModel.alarmTimes[h] ?: "12:00"
+                            val timeStr = viewModel.draftAlarmTimes[h] ?: "12:00"
 
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -2977,33 +2994,37 @@ fun WheelPicker(
     LaunchedEffect(lazyListState) {
         snapshotFlow { lazyListState.firstVisibleItemIndex }
             .collect { firstIndex ->
-                val centerIndex = firstIndex + 1
-                val mappedIndex = centerIndex % rangeSize
-                val selectedVal = rangeList[mappedIndex]
-                if (selectedVal != value) {
-                    onValueChange(selectedVal)
-                    try {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    } catch (e: Exception) {}
+                if (lazyListState.isScrollInProgress) {
+                    val centerIndex = firstIndex + 1
+                    val mappedIndex = centerIndex % rangeSize
+                    val selectedVal = rangeList[mappedIndex]
+                    if (selectedVal != value) {
+                        onValueChange(selectedVal)
+                        try {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        } catch (e: Exception) {}
+                    }
                 }
             }
     }
     
     LaunchedEffect(value) {
-        val currentFirstIndex = lazyListState.firstVisibleItemIndex
-        val currentCenterIndex = currentFirstIndex + 1
-        val currentMappedIndex = currentCenterIndex % rangeSize
-        val currentSelectedVal = rangeList[currentMappedIndex]
-        
-        if (currentSelectedVal != value) {
-            val diff = rangeList.indexOf(value) - currentMappedIndex
-            val shortestDiff = when {
-                diff > rangeSize / 2 -> diff - rangeSize
-                diff < -rangeSize / 2 -> diff + rangeSize
-                else -> diff
+        if (!lazyListState.isScrollInProgress) {
+            val currentFirstIndex = lazyListState.firstVisibleItemIndex
+            val currentCenterIndex = currentFirstIndex + 1
+            val currentMappedIndex = currentCenterIndex % rangeSize
+            val currentSelectedVal = rangeList[currentMappedIndex]
+            
+            if (currentSelectedVal != value) {
+                val diff = rangeList.indexOf(value) - currentMappedIndex
+                val shortestDiff = when {
+                    diff > rangeSize / 2 -> diff - rangeSize
+                    diff < -rangeSize / 2 -> diff + rangeSize
+                    else -> diff
+                }
+                val targetIndex = currentFirstIndex + shortestDiff
+                lazyListState.scrollToItem(targetIndex)
             }
-            val targetIndex = currentFirstIndex + shortestDiff
-            lazyListState.animateScrollToItem(targetIndex)
         }
     }
     
@@ -3082,31 +3103,35 @@ fun SwipePeriodPicker(
     LaunchedEffect(lazyListState) {
         snapshotFlow { lazyListState.firstVisibleItemIndex }
             .collect { firstIndex ->
-                val centerIndex = firstIndex + 1
-                val mappedIndex = centerIndex % 2
-                val selectedAm = mappedIndex == 1
-                if (selectedAm != isAm) {
-                    onValueChange(selectedAm)
-                    try {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    } catch (e: Exception) {}
+                if (lazyListState.isScrollInProgress) {
+                    val centerIndex = firstIndex + 1
+                    val mappedIndex = centerIndex % 2
+                    val selectedAm = mappedIndex == 1
+                    if (selectedAm != isAm) {
+                        onValueChange(selectedAm)
+                        try {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        } catch (e: Exception) {}
+                    }
                 }
             }
     }
     
     LaunchedEffect(isAm) {
-        val currentFirstIndex = lazyListState.firstVisibleItemIndex
-        val currentCenterIndex = currentFirstIndex + 1
-        val currentMappedIndex = currentCenterIndex % 2
-        val currentSelectedAm = currentMappedIndex == 1
-        
-        if (currentSelectedAm != isAm) {
-            val targetIndex = if (isAm) {
-                if (currentMappedIndex == 0) currentFirstIndex + 1 else currentFirstIndex - 1
-            } else {
-                if (currentMappedIndex == 1) currentFirstIndex + 1 else currentFirstIndex - 1
+        if (!lazyListState.isScrollInProgress) {
+            val currentFirstIndex = lazyListState.firstVisibleItemIndex
+            val currentCenterIndex = currentFirstIndex + 1
+            val currentMappedIndex = currentCenterIndex % 2
+            val currentSelectedAm = currentMappedIndex == 1
+            
+            if (currentSelectedAm != isAm) {
+                val targetIndex = if (isAm) {
+                    if (currentMappedIndex == 0) currentFirstIndex + 1 else currentFirstIndex - 1
+                } else {
+                    if (currentMappedIndex == 1) currentFirstIndex + 1 else currentFirstIndex - 1
+                }
+                lazyListState.scrollToItem(targetIndex)
             }
-            lazyListState.animateScrollToItem(targetIndex)
         }
     }
     

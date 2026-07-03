@@ -63,6 +63,10 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
     var alarmTimes by mutableStateOf<Map<Int, String>>(emptyMap())
         private set
 
+    var draftAlarmEnabled by mutableStateOf(false)
+    var draftAlarmRingtoneUri by mutableStateOf<String?>(null)
+    var draftAlarmTimes by mutableStateOf<Map<Int, String>>(emptyMap())
+
     // Password Management Fields
     var oldPasswordInput by mutableStateOf("")
     var newPasswordInput by mutableStateOf("")
@@ -115,8 +119,11 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
 
             // Load Alarm Settings
             alarmEnabled = repository.getConfig("alarm_enabled", "false").toBoolean()
+            draftAlarmEnabled = alarmEnabled
+
             alarmRingtoneUri = repository.getConfig("alarm_ringtone_uri", "")
             if (alarmRingtoneUri == "") alarmRingtoneUri = null
+            draftAlarmRingtoneUri = alarmRingtoneUri
 
             val tMap = mutableMapOf<Int, String>()
             for (h in 0..7) {
@@ -135,6 +142,7 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
                 tMap[h] = time
             }
             alarmTimes = tMap
+            draftAlarmTimes = tMap
 
             isInitialized = true
 
@@ -251,16 +259,27 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 repository.saveAppointmentCells(cellEntities)
 
-                // Re-schedule alarms with the new saved cells
-                if (alarmEnabled) {
-                    AlarmScheduler.scheduleAlarms(
-                        getApplication(),
-                        alarmEnabled,
-                        alarmTimes,
-                        alarmRingtoneUri ?: "",
-                        cellEntities
-                    )
+                // Commit alarm configuration from draft state
+                alarmEnabled = draftAlarmEnabled
+                alarmRingtoneUri = draftAlarmRingtoneUri
+                alarmTimes = draftAlarmTimes
+
+                repository.saveConfig("alarm_enabled", alarmEnabled.toString())
+                repository.saveConfig("alarm_ringtone_uri", alarmRingtoneUri ?: "")
+                alarmTimes.forEach { (h, timeStr) ->
+                    repository.saveConfig("alarm_time_$h", timeStr)
                 }
+
+                // Re-schedule alarms with the new saved configuration and cells
+                AlarmScheduler.scheduleAlarms(
+                    getApplication(),
+                    alarmEnabled,
+                    alarmTimes,
+                    alarmRingtoneUri ?: "",
+                    cellEntities
+                )
+
+                _uiEvent.emit("تم تثبيت المواعيد وإعدادات المنبه بنجاح 💾")
             } catch (e: Exception) {
                 _uiEvent.emit("حدث خطأ أثناء حفظ المواعيد: ${e.localizedMessage}")
             }
@@ -484,8 +503,11 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
     fun revertAppointments() {
         draftHourHeaders = hourHeaders.value.associate { it.hourIndex to it.name }
         draftCells = appointmentCells.value.associate { (it.dayIndex to it.hourIndex) to it.content }
+        draftAlarmEnabled = alarmEnabled
+        draftAlarmRingtoneUri = alarmRingtoneUri
+        draftAlarmTimes = alarmTimes
         viewModelScope.launch {
-            // Revert message removed per user request
+            _uiEvent.emit("تم التراجع عن التعديلات وإعادتها لحالتها المحفوظة")
         }
     }
 
@@ -653,31 +675,16 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
     // --- ALARM MANAGEMENT ---
 
     fun toggleAlarmEnabled(context: Context, enabled: Boolean) {
-        alarmEnabled = enabled
-        viewModelScope.launch {
-            repository.saveConfig("alarm_enabled", enabled.toString())
-            val savedCells = repository.getAppointmentCellsList()
-            AlarmScheduler.scheduleAlarms(context, enabled, alarmTimes, alarmRingtoneUri ?: "", savedCells)
-        }
+        draftAlarmEnabled = enabled
     }
 
     fun setAlarmRingtone(context: Context, uri: String) {
-        alarmRingtoneUri = uri
-        viewModelScope.launch {
-            repository.saveConfig("alarm_ringtone_uri", uri)
-            val savedCells = repository.getAppointmentCellsList()
-            AlarmScheduler.scheduleAlarms(context, alarmEnabled, alarmTimes, uri, savedCells)
-        }
+        draftAlarmRingtoneUri = uri
     }
 
     fun updateAlarmTime(context: Context, hourIndex: Int, timeStr: String) {
-        val updatedMap = alarmTimes.toMutableMap()
+        val updatedMap = draftAlarmTimes.toMutableMap()
         updatedMap[hourIndex] = timeStr
-        alarmTimes = updatedMap
-        viewModelScope.launch {
-            repository.saveConfig("alarm_time_$hourIndex", timeStr)
-            val savedCells = repository.getAppointmentCellsList()
-            AlarmScheduler.scheduleAlarms(context, alarmEnabled, updatedMap, alarmRingtoneUri ?: "", savedCells)
-        }
+        draftAlarmTimes = updatedMap
     }
 }
