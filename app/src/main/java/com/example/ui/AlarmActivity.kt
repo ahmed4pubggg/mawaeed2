@@ -21,6 +21,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -143,6 +144,17 @@ fun AlarmScreen(
         label = "auraAlpha"
     )
 
+    // Rapid wiggling / ringing animation for the alarm bell icon
+    val wiggleRotation by infiniteTransition.animateFloat(
+        initialValue = -16f,
+        targetValue = 16f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(110, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "wiggleRotation"
+    )
+
     val formattedTime = remember(time) {
         try {
             val parts = time.split(":")
@@ -246,7 +258,9 @@ fun AlarmScreen(
                         imageVector = Icons.Filled.Alarm,
                         contentDescription = "المنبه",
                         tint = Color(0xFF001F1A),
-                        modifier = Modifier.size(50.dp)
+                        modifier = Modifier
+                            .size(50.dp)
+                            .rotate(wiggleRotation)
                     )
                 }
             }
@@ -267,19 +281,28 @@ fun AlarmScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Premium Glassmorphic Card (Deep translucent teal background with thick gold accents)
+            // Premium Glassmorphic Card (Deep translucent teal background with thick gold and white glass accents)
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .border(
-                        border = BorderStroke(1.5.dp, Brush.verticalGradient(listOf(Color(0xFFFFD54F), Color(0xFF00796B)))),
+                        border = BorderStroke(
+                            1.5.dp, 
+                            Brush.verticalGradient(
+                                listOf(
+                                    Color(0xFFFFD54F).copy(alpha = 0.8f), 
+                                    Color.White.copy(alpha = 0.4f), 
+                                    Color(0xFF00796B).copy(alpha = 0.4f)
+                                )
+                            )
+                        ),
                         shape = RoundedCornerShape(28.dp)
                     ),
                 colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFF002520).copy(alpha = 0.88f)
+                    containerColor = Color(0xFF001F1A).copy(alpha = 0.38f)
                 ),
                 shape = RoundedCornerShape(28.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 16.dp)
             ) {
                 Column(
                     modifier = Modifier

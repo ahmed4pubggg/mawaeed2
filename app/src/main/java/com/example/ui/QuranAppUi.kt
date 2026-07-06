@@ -1083,10 +1083,12 @@ fun StudentsTab(viewModel: QuranViewModel, isGroup2: Boolean = false) {
     val draftMonthHeaders = if (isGroup2) viewModel.draftMonthHeaders2 else viewModel.draftMonthHeaders
     val draftPayments = if (isGroup2) viewModel.draftPayments2 else viewModel.draftPayments
 
-    val draftStudents: List<StudentEntity> = if (isGroup2) {
-        viewModel.draftStudents2.map { StudentEntity(id = it.id, fullName = it.fullName, lastModified = it.lastModified) }
-    } else {
-        viewModel.draftStudents
+    val draftStudents: List<StudentEntity> = remember(isGroup2, viewModel.draftStudents, viewModel.draftStudents2) {
+        if (isGroup2) {
+            viewModel.draftStudents2.map { StudentEntity(id = it.id, fullName = it.fullName, lastModified = it.lastModified) }
+        } else {
+            viewModel.draftStudents
+        }
     }
 
     val scale = viewModel.tableZoomScale
@@ -1143,20 +1145,32 @@ fun StudentsTab(viewModel: QuranViewModel, isGroup2: Boolean = false) {
     var confirmPasswordInput by rememberSaveable { mutableStateOf("") }
     var confirmPasswordError by rememberSaveable { mutableStateOf<String?>(null) }
 
+    var isConfirmingDeleteAllByPassword by rememberSaveable { mutableStateOf(false) }
+    var deleteAllPasswordInput by rememberSaveable { mutableStateOf("") }
+    var deleteAllPasswordError by rememberSaveable { mutableStateOf<String?>(null) }
+
     val horizontalScrollState = rememberScrollState()
     val verticalScrollState = rememberScrollState()
 
     // Check if drafts differ from DB to show warning
-    val dbMonths: List<MonthHeaderEntity> = if (isGroup2) {
-        viewModel.monthHeaders2.collectAsState().value.map { MonthHeaderEntity(monthIndex = it.monthIndex, name = it.name) }
-    } else {
-        viewModel.monthHeaders.collectAsState().value
+    val dbMonthsState1 = viewModel.monthHeaders.collectAsState()
+    val dbMonthsState2 = viewModel.monthHeaders2.collectAsState()
+    val dbMonths = remember(isGroup2, dbMonthsState1.value, dbMonthsState2.value) {
+        if (isGroup2) {
+            dbMonthsState2.value.map { MonthHeaderEntity(monthIndex = it.monthIndex, name = it.name) }
+        } else {
+            dbMonthsState1.value
+        }
     }
 
-    val dbPayments: List<PaymentEntity> = if (isGroup2) {
-        viewModel.payments2.collectAsState().value.map { PaymentEntity(studentId = it.studentId, monthIndex = it.monthIndex, paid = it.paid) }
-    } else {
-        viewModel.payments.collectAsState().value
+    val dbPaymentsState1 = viewModel.payments.collectAsState()
+    val dbPaymentsState2 = viewModel.payments2.collectAsState()
+    val dbPayments = remember(isGroup2, dbPaymentsState1.value, dbPaymentsState2.value) {
+        if (isGroup2) {
+            dbPaymentsState2.value.map { PaymentEntity(studentId = it.studentId, monthIndex = it.monthIndex, paid = it.paid) }
+        } else {
+            dbPaymentsState1.value
+        }
     }
 
     val hasUnsavedChanges = remember(draftMonthHeaders, draftPayments, dbMonths, dbPayments, studentList, draftStudents, deletedStudentIds) {
@@ -1186,7 +1200,7 @@ fun StudentsTab(viewModel: QuranViewModel, isGroup2: Boolean = false) {
                     onValueChange = { searchQuery = it },
                     modifier = Modifier
                         .weight(1f)
-                        .height(50.dp),
+                        .height(56.dp),
                     placeholder = { 
                         Text(
                             "البحث الفوري عن طالب...", 
@@ -1501,7 +1515,7 @@ fun StudentsTab(viewModel: QuranViewModel, isGroup2: Boolean = false) {
                             filteredAndSortedStudents.forEachIndexed { sIdx, student ->
                                 Box(
                                     modifier = Modifier
-                                        .size(width = (158 * scale).dp, height = (56 * scale).dp)
+                                        .size(width = (158 * scale).dp, height = (64 * scale).dp)
                                         .background(
                                             if (sIdx % 2 == 0) {
                                                 if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f) else LightTeal.copy(alpha = 0.2f)
@@ -1567,7 +1581,7 @@ fun StudentsTab(viewModel: QuranViewModel, isGroup2: Boolean = false) {
                                             Box(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .height((56 * scale).dp)
+                                                    .height((64 * scale).dp)
                                                     .background(
                                                         if (sIdx % 2 == 0) {
                                                             if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f) else LightTeal.copy(alpha = 0.1f)
@@ -1646,6 +1660,28 @@ fun StudentsTab(viewModel: QuranViewModel, isGroup2: Boolean = false) {
                         Icon(Icons.Filled.Add, contentDescription = "إضافة طالب", modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
                         Text("+ إضافة", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+
+                    // Delete All Button (Protected by Password)
+                    if (draftStudents.isNotEmpty()) {
+                        OutlinedButton(
+                            onClick = {
+                                deleteAllPasswordInput = ""
+                                deleteAllPasswordError = null
+                                isConfirmingDeleteAllByPassword = true
+                            },
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = if (isSystemInDarkTheme()) Color(0xFFEF5350) else Color(0xFFD32F2F)
+                            ),
+                            border = BorderStroke(1.dp, if (isSystemInDarkTheme()) Color(0xFFEF5350) else Color(0xFFD32F2F)),
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                            modifier = Modifier.height(38.dp)
+                        ) {
+                            Icon(Icons.Filled.DeleteSweep, contentDescription = "حذف جميع الطلاب", modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("حذف الكل", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        }
                     }
 
                     // Status indicator without enclosing badge box, keeping standard text and red/green colors
@@ -2046,6 +2082,122 @@ fun StudentsTab(viewModel: QuranViewModel, isGroup2: Boolean = false) {
                                 )
                             ) {
                                 Text("تأكيد وحفظ")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 4.5 Confirm Delete All Students Dialog
+        if (isConfirmingDeleteAllByPassword) {
+            Dialog(
+                onDismissRequest = { isConfirmingDeleteAllByPassword = false },
+                properties = DialogProperties(usePlatformDefaultWidth = false)
+            ) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth(0.9f)
+                        .wrapContentHeight()
+                        .padding(16.dp)
+                        .imePadding(),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .padding(20.dp)
+                            .fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Warning,
+                            contentDescription = "تحذير حذف الكل",
+                            tint = if (isSystemInDarkTheme()) Color(0xFFEF5350) else Color(0xFFD32F2F),
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "حذف جميع الأسماء والبيانات المالية",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = if (isSystemInDarkTheme()) Color(0xFFEF5350) else Color(0xFFD32F2F)
+                            )
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "تحذير: سيتم مسح وحذف كافة أسماء الطلاب وبياناتهم المالية والمدفوعات نهائياً من قاعدة البيانات للتبويب الحالي! لا يمكن التراجع عن هذا الإجراء.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        OutlinedTextField(
+                            value = deleteAllPasswordInput,
+                            onValueChange = { 
+                                deleteAllPasswordInput = it
+                                deleteAllPasswordError = null
+                            },
+                            label = { Text("أدخل كلمة مرور البرنامج لتأكيد الحذف") },
+                            singleLine = true,
+                            visualTransformation = PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                            isError = deleteAllPasswordError != null,
+                            supportingText = {
+                                if (deleteAllPasswordError != null) {
+                                    Text(
+                                        text = deleteAllPasswordError!!,
+                                        color = MaterialTheme.colorScheme.error,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                            },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = if (isSystemInDarkTheme()) Color(0xFFEF5350) else Color(0xFFD32F2F),
+                                focusedLabelColor = if (isSystemInDarkTheme()) Color(0xFFEF5350) else Color(0xFFD32F2F)
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            TextButton(onClick = { 
+                                isConfirmingDeleteAllByPassword = false 
+                                deleteAllPasswordInput = ""
+                                deleteAllPasswordError = null
+                            }) {
+                                Text("إلغاء", color = if (isSystemInDarkTheme()) LightText else DarkTeal)
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Button(
+                                onClick = {
+                                    if (deleteAllPasswordInput.isEmpty()) {
+                                        deleteAllPasswordError = "يرجى إدخال كلمة السر أولاً"
+                                    } else {
+                                        val deleteFn = if (isGroup2) viewModel::deleteAllStudents2 else viewModel::deleteAllStudents
+                                        deleteFn(
+                                            deleteAllPasswordInput,
+                                            {
+                                                isConfirmingDeleteAllByPassword = false
+                                                deleteAllPasswordInput = ""
+                                                deleteAllPasswordError = null
+                                            },
+                                            { errorMsg ->
+                                                deleteAllPasswordError = errorMsg
+                                            }
+                                        )
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (isSystemInDarkTheme()) Color(0xFFEF5350) else Color(0xFFD32F2F),
+                                    contentColor = Color.White
+                                )
+                            ) {
+                                Text("حذف نهائي", fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -2683,7 +2835,7 @@ fun ZoomControls(viewModel: QuranViewModel, showAlarmButton: Boolean = true) {
         // Minus Button
         IconButton(
             onClick = {
-                if (viewModel.tableZoomScale > 0.85f) {
+                if (viewModel.tableZoomScale > 0.65f) {
                     viewModel.tableZoomScale -= 0.1f
                 }
             },
@@ -2708,7 +2860,7 @@ fun ZoomControls(viewModel: QuranViewModel, showAlarmButton: Boolean = true) {
         // Plus Button
         IconButton(
             onClick = {
-                if (viewModel.tableZoomScale < 1.45f) {
+                if (viewModel.tableZoomScale < 1.35f) {
                     viewModel.tableZoomScale += 0.1f
                 }
             },
@@ -2723,9 +2875,9 @@ fun ZoomControls(viewModel: QuranViewModel, showAlarmButton: Boolean = true) {
         }
         
         // Reset Button
-        if (viewModel.tableZoomScale != 1.0f) {
+        if (viewModel.tableZoomScale != 0.9f) {
             TextButton(
-                onClick = { viewModel.tableZoomScale = 1.0f },
+                onClick = { viewModel.tableZoomScale = 0.9f },
                 contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp),
                 modifier = Modifier.height(28.dp)
             ) {

@@ -58,7 +58,7 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
         private set
     var draftStudents by mutableStateOf<List<StudentEntity>>(emptyList())
     var deletedStudentIds by mutableStateOf<Set<Int>>(emptySet())
-    var tableZoomScale by mutableStateOf(1.0f)
+    var tableZoomScale by mutableStateOf(0.9f)
 
     // Draft State for Students & Payments Tab - Group 2
     var draftMonthHeaders2 by mutableStateOf<Map<Int, String>>(emptyMap())
@@ -923,13 +923,89 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
         draftAlarmEnabled = enabled
     }
 
-    fun setAlarmRingtone(context: Context, uri: String) {
-        draftAlarmRingtoneUri = uri
+    fun setAlarmRingtone(context: Context, uriString: String) {
+        try {
+            val uri = android.net.Uri.parse(uriString)
+            if (uri.scheme == "content") {
+                // Try taking persistable URI permission first (useful for system media)
+                try {
+                    context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                } catch (pe: Exception) {
+                    // Ignore, proceed to copying
+                }
+                
+                // Copy the file to the app's internal storage so that it works even if closed or killed
+                val inputStream = context.contentResolver.openInputStream(uri)
+                if (inputStream != null) {
+                    val localFile = java.io.File(context.filesDir, "custom_alarm_ringtone.mp3")
+                    if (localFile.exists()) {
+                        localFile.delete()
+                    }
+                    val outputStream = java.io.FileOutputStream(localFile)
+                    inputStream.copyTo(outputStream)
+                    inputStream.close()
+                    outputStream.close()
+                    
+                    draftAlarmRingtoneUri = android.net.Uri.fromFile(localFile).toString()
+                    return
+                }
+            }
+            draftAlarmRingtoneUri = uriString
+        } catch (e: Exception) {
+            e.printStackTrace()
+            draftAlarmRingtoneUri = uriString
+        }
     }
 
     fun updateAlarmTime(context: Context, hourIndex: Int, timeStr: String) {
         val updatedMap = draftAlarmTimes.toMutableMap()
         updatedMap[hourIndex] = timeStr
         draftAlarmTimes = updatedMap
+    }
+
+    /**
+     * Deletes all students in group 1 securely with password
+     */
+    fun deleteAllStudents(
+        passwordEntering: String,
+        onSuccess: () -> Unit,
+        onFailure: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            val correctPassword = repository.getPassword()
+            if (passwordEntering == correctPassword) {
+                val positiveIds = draftStudents.filter { it.id > 0 }.map { it.id }
+                deletedStudentIds = deletedStudentIds + positiveIds
+                draftStudents = emptyList()
+                draftPayments = emptyMap()
+                saveNamesAndPayments()
+                onSuccess()
+            } else {
+                onFailure("كلمة السر غير صحيحة، يرجى المحاولة مرة أخرى")
+            }
+        }
+    }
+
+    /**
+     * Deletes all students in group 2 securely with password
+     */
+    fun deleteAllStudents2(
+        passwordEntering: String,
+        onSuccess: () -> Unit,
+        onFailure: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            val correctPassword = repository.getPassword()
+            if (passwordEntering == correctPassword) {
+                val positiveIds = draftStudents2.filter { it.id > 0 }.map { it.id }
+                deletedStudentIds2 = deletedStudentIds2 + positiveIds
+                draftStudents2 = emptyList()
+                draftPayments2 = emptyMap()
+                saveNamesAndPayments2()
+                onSuccess()
+            } else {
+                onFailure("كلمة السر غير صحيحة، يرجى المحاولة مرة أخرى")
+            }
+        }
     }
 }
