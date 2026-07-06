@@ -80,4 +80,49 @@ interface QuranDao {
 
     @Query("DELETE FROM payments")
     suspend fun deleteAllPayments()
+
+    // --- GROUP 2 DATA ACCESS ---
+
+    // Students 2
+    @Query("SELECT * FROM students2 ORDER BY id ASC")
+    fun getStudents2(): Flow<List<Student2Entity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun saveStudent2(student: Student2Entity): Long
+
+    @Query("DELETE FROM students2 WHERE id = :studentId")
+    suspend fun deleteStudent2(studentId: Int)
+
+    @Update
+    suspend fun updateStudent2(student: Student2Entity)
+
+    // Month Headers 2
+    @Query("SELECT * FROM month_headers2 ORDER BY monthIndex ASC")
+    fun getMonthHeaders2(): Flow<List<MonthHeader2Entity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun saveMonthHeaders2(headers: List<MonthHeader2Entity>)
+
+    @Query("SELECT COUNT(*) FROM month_headers2")
+    suspend fun getMonthHeaders2Count(): Int
+
+    // Payments 2
+    @Query("SELECT * FROM payments2")
+    fun getPayments2(): Flow<List<Payment2Entity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun savePayments2(payments: List<Payment2Entity>)
+
+    @Query("DELETE FROM payments2 WHERE studentId = :studentId")
+    suspend fun deletePaymentsForStudent2(studentId: Int)
+
+    @Query("DELETE FROM students2")
+    suspend fun deleteAllStudents2()
+
+    @Query("DELETE FROM month_headers2")
+    suspend fun deleteAllMonthHeaders2()
+
+    @Query("DELETE FROM payments2")
+    suspend fun deleteAllPayments2()
 }
+

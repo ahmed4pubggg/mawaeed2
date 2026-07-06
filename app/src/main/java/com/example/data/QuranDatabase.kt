@@ -12,9 +12,12 @@ import androidx.room.RoomDatabase
         AppointmentCellEntity::class,
         StudentEntity::class,
         MonthHeaderEntity::class,
-        PaymentEntity::class
+        PaymentEntity::class,
+        Student2Entity::class,
+        MonthHeader2Entity::class,
+        Payment2Entity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class QuranDatabase : RoomDatabase() {

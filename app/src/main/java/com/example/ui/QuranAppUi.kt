@@ -47,7 +47,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.runtime.saveable.rememberSaveable
 import com.example.R
-import com.example.data.StudentEntity
+import com.example.data.*
 import com.example.ui.theme.*
 import com.example.ui.theme.DarkTeal
 import com.example.ui.theme.MediumTeal
@@ -330,7 +330,8 @@ fun MainAppScreen(viewModel: QuranViewModel) {
 
     val tabs = listOf(
         "جدول المواعيد" to Icons.Filled.CalendarMonth,
-        "شؤون الطلاب" to Icons.Filled.People,
+        "شؤون 1" to Icons.Filled.People,
+        "شؤون 2" to Icons.Filled.People,
         "كلمة السر" to Icons.Filled.Lock
     )
 
@@ -449,8 +450,9 @@ fun MainAppScreen(viewModel: QuranViewModel) {
                 ) {
                     when (selectedTab) {
                         0 -> AppointmentsTab(viewModel = viewModel)
-                        1 -> StudentsTab(viewModel = viewModel)
-                        2 -> PasswordTab(viewModel = viewModel)
+                        1 -> StudentsTab(viewModel = viewModel, isGroup2 = false)
+                        2 -> StudentsTab(viewModel = viewModel, isGroup2 = true)
+                        3 -> PasswordTab(viewModel = viewModel)
                     }
                 }
 
@@ -521,8 +523,9 @@ fun MainAppScreen(viewModel: QuranViewModel) {
             ) {
                 when (selectedTab) {
                     0 -> AppointmentsTab(viewModel = viewModel)
-                    1 -> StudentsTab(viewModel = viewModel)
-                    2 -> PasswordTab(viewModel = viewModel)
+                    1 -> StudentsTab(viewModel = viewModel, isGroup2 = false)
+                    2 -> StudentsTab(viewModel = viewModel, isGroup2 = true)
+                    3 -> PasswordTab(viewModel = viewModel)
                 }
             }
 
@@ -1102,12 +1105,34 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun StudentsTab(viewModel: QuranViewModel) {
-    val studentList by viewModel.students.collectAsState()
-    val draftMonthHeaders = viewModel.draftMonthHeaders
-    val draftPayments = viewModel.draftPayments
-    val draftStudents = viewModel.draftStudents
+fun StudentsTab(viewModel: QuranViewModel, isGroup2: Boolean = false) {
+    val studentList: List<StudentEntity> = if (isGroup2) {
+        viewModel.students2.collectAsState().value.map { StudentEntity(id = it.id, fullName = it.fullName, lastModified = it.lastModified) }
+    } else {
+        viewModel.students.collectAsState().value
+    }
+
+    val draftMonthHeaders = if (isGroup2) viewModel.draftMonthHeaders2 else viewModel.draftMonthHeaders
+    val draftPayments = if (isGroup2) viewModel.draftPayments2 else viewModel.draftPayments
+
+    val draftStudents: List<StudentEntity> = if (isGroup2) {
+        viewModel.draftStudents2.map { StudentEntity(id = it.id, fullName = it.fullName, lastModified = it.lastModified) }
+    } else {
+        viewModel.draftStudents
+    }
+
     val scale = viewModel.tableZoomScale
+
+    // mutator mappings
+    val addStudentFn = if (isGroup2) viewModel::addStudent2 else viewModel::addStudent
+    val deleteStudentFn = if (isGroup2) viewModel::deleteStudent2 else viewModel::deleteStudent
+    val updateStudentNameFn = if (isGroup2) viewModel::updateStudentName2 else viewModel::updateStudentName
+    val updateDraftMonthHeaderFn = if (isGroup2) viewModel::updateDraftMonthHeader2 else viewModel::updateDraftMonthHeader
+    val toggleDraftPaymentFn = if (isGroup2) viewModel::toggleDraftPayment2 else viewModel::toggleDraftPayment
+    val verifyPasswordAndSaveFn = if (isGroup2) viewModel::verifyPasswordAndSave2 else viewModel::verifyPasswordAndSave
+    val revertNamesAndPaymentsFn = if (isGroup2) viewModel::revertNamesAndPayments2 else viewModel::revertNamesAndPayments
+    
+    val deletedStudentIds = if (isGroup2) viewModel.deletedStudentIds2 else viewModel.deletedStudentIds
 
     // Search and Sort states
     var searchQuery by rememberSaveable { mutableStateOf("") }
@@ -1151,16 +1176,25 @@ fun StudentsTab(viewModel: QuranViewModel) {
     val verticalScrollState = rememberScrollState()
 
     // Check if drafts differ from DB to show warning
-    val dbMonths = viewModel.monthHeaders.collectAsState().value
-    val dbPayments = viewModel.payments.collectAsState().value
+    val dbMonths: List<MonthHeaderEntity> = if (isGroup2) {
+        viewModel.monthHeaders2.collectAsState().value.map { MonthHeaderEntity(monthIndex = it.monthIndex, name = it.name) }
+    } else {
+        viewModel.monthHeaders.collectAsState().value
+    }
 
-    val hasUnsavedChanges = remember(draftMonthHeaders, draftPayments, dbMonths, dbPayments, studentList, viewModel.draftStudents, viewModel.deletedStudentIds) {
+    val dbPayments: List<PaymentEntity> = if (isGroup2) {
+        viewModel.payments2.collectAsState().value.map { PaymentEntity(studentId = it.studentId, monthIndex = it.monthIndex, paid = it.paid) }
+    } else {
+        viewModel.payments.collectAsState().value
+    }
+
+    val hasUnsavedChanges = remember(draftMonthHeaders, draftPayments, dbMonths, dbPayments, studentList, draftStudents, deletedStudentIds) {
         val dbMonthsMap = dbMonths.associate { it.monthIndex to it.name }
         val dbPaymentsMap = dbPayments.associate { (it.studentId to it.monthIndex) to it.paid }
         draftMonthHeaders != dbMonthsMap || 
                 draftPayments != dbPaymentsMap || 
-                viewModel.draftStudents != studentList || 
-                viewModel.deletedStudentIds.isNotEmpty()
+                draftStudents != studentList || 
+                deletedStudentIds.isNotEmpty()
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -1548,7 +1582,7 @@ fun StudentsTab(viewModel: QuranViewModel) {
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 IconButton(
-                                                    onClick = { viewModel.toggleDraftPayment(student.id, monthIdx) },
+                                                    onClick = { toggleDraftPaymentFn(student.id, monthIdx) },
                                                     modifier = Modifier
                                                         .size(width = (30 * scale).dp, height = (26 * scale).dp)
                                                         .clip(RoundedCornerShape(6.dp))
@@ -1645,7 +1679,7 @@ fun StudentsTab(viewModel: QuranViewModel) {
                     if (hasUnsavedChanges) {
                         val undoColor = if (isSystemInDarkTheme()) Color(0xFFE57373) else Color(0xFFD32F2F)
                         OutlinedButton(
-                            onClick = { viewModel.revertNamesAndPayments() },
+                            onClick = { revertNamesAndPaymentsFn() },
                             colors = ButtonDefaults.outlinedButtonColors(
                                 contentColor = undoColor
                             ),
@@ -1742,7 +1776,7 @@ fun StudentsTab(viewModel: QuranViewModel) {
                             Button(
                                 onClick = {
                                     if (addStudentInput.trim().isNotEmpty()) {
-                                        viewModel.addStudent(addStudentInput)
+                                        addStudentFn(addStudentInput)
                                         isAddingStudent = false
                                         addStudentInput = ""
                                     }
@@ -1806,7 +1840,7 @@ fun StudentsTab(viewModel: QuranViewModel) {
                             // Delete student
                             IconButton(
                                 onClick = {
-                                    viewModel.deleteStudent(student.id, student.fullName)
+                                    deleteStudentFn(student.id, student.fullName)
                                     editingStudentId = null
                                 },
                                 modifier = Modifier
@@ -1827,7 +1861,7 @@ fun StudentsTab(viewModel: QuranViewModel) {
                                 Button(
                                     onClick = {
                                         if (editingStudentInput.trim().isNotEmpty()) {
-                                            viewModel.updateStudentName(student.id, editingStudentInput)
+                                            updateStudentNameFn(student.id, editingStudentInput)
                                             editingStudentId = null
                                         }
                                     },
@@ -1892,7 +1926,7 @@ fun StudentsTab(viewModel: QuranViewModel) {
                             }
                             Button(
                                 onClick = {
-                                    viewModel.updateDraftMonthHeader(index, editingMonthCurrentValue)
+                                    updateDraftMonthHeaderFn(index, editingMonthCurrentValue)
                                     editingMonthIndex = null
                                 },
                                 colors = ButtonDefaults.buttonColors(
@@ -1996,14 +2030,14 @@ fun StudentsTab(viewModel: QuranViewModel) {
                                     if (confirmPasswordInput.isEmpty()) {
                                         confirmPasswordError = "يرجى إدخال كلمة السر أولاً"
                                     } else {
-                                        viewModel.verifyPasswordAndSave(
-                                            password = confirmPasswordInput,
-                                            onSuccess = {
+                                        verifyPasswordAndSaveFn(
+                                            confirmPasswordInput,
+                                            {
                                                 isConfirmingPaymentsWithPassword = false
                                                 confirmPasswordInput = ""
                                                 confirmPasswordError = null
                                             },
-                                            onFailure = { errorMsg ->
+                                            { errorMsg ->
                                                 confirmPasswordError = errorMsg
                                             }
                                         )
@@ -2586,8 +2620,14 @@ fun AlarmSettingsDialog(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == android.app.Activity.RESULT_OK) {
-            val uri = result.data?.getParcelableExtra<Uri>(android.media.RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
+            val uri = result.data?.data ?: result.data?.getParcelableExtra<Uri>(android.media.RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
             if (uri != null) {
+                try {
+                    val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    context.contentResolver.takePersistableUriPermission(uri, takeFlags)
+                } catch (e: Exception) {
+                    // Ignore if permission not persistable
+                }
                 viewModel.setAlarmRingtone(context, uri.toString())
             }
         }
@@ -2759,12 +2799,9 @@ fun AlarmSettingsDialog(
                         ) {
                             Button(
                                 onClick = {
-                                    val intent = Intent(android.media.RingtoneManager.ACTION_RINGTONE_PICKER).apply {
-                                        putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_TYPE, android.media.RingtoneManager.TYPE_ALARM)
-                                        putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_TITLE, "اختر نغمة التنبيه للحصص")
-                                        putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, viewModel.draftAlarmRingtoneUri?.let { Uri.parse(it) })
-                                        putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
-                                        putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
+                                    val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+                                        type = "audio/*"
+                                        addCategory(Intent.CATEGORY_OPENABLE)
                                     }
                                     ringtoneLauncher.launch(intent)
                                 },
@@ -2785,6 +2822,32 @@ fun AlarmSettingsDialog(
                                 fontWeight = FontWeight.Medium,
                                 color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurface else DarkTeal
                             )
+                        }
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Button(
+                            onClick = {
+                                val testIntent = Intent(context, AlarmService::class.java).apply {
+                                    putExtra("appointment_text", "حصة تجريبية - الشيخ أحمد النمس")
+                                    putExtra("appointment_day", "يوم تجريبي")
+                                    putExtra("appointment_time", "12:00")
+                                    putExtra("ringtone_uri", viewModel.draftAlarmRingtoneUri ?: "")
+                                }
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                                    context.startForegroundService(testIntent)
+                                } else {
+                                    context.startService(testIntent)
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isSystemInDarkTheme()) Color(0xFFFFD54F) else Color(0xFFFBC02D),
+                                contentColor = if (isSystemInDarkTheme()) Color(0xFF3E2723) else Color(0xFF5D4037)
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("تجربة المنبه ⏰", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
                     }
 

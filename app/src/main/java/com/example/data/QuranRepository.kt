@@ -95,6 +95,44 @@ class QuranRepository(private val dao: QuranDao) {
             }
             dao.saveMonthHeaders(entities)
         }
+
+        // Seed default month headers 2 "يناير" to "يونيو" if empty
+        if (dao.getMonthHeaders2Count() == 0) {
+            val defaultMonths = listOf("يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو")
+            val entities = defaultMonths.mapIndexed { index, name ->
+                MonthHeader2Entity(index, name)
+            }
+            dao.saveMonthHeaders2(entities)
+        }
+    }
+
+    // --- GROUP 2 METHODS ---
+
+    val students2: Flow<List<Student2Entity>> = dao.getStudents2()
+
+    suspend fun saveStudent2(student: Student2Entity): Long {
+        return dao.saveStudent2(student)
+    }
+
+    suspend fun deleteStudent2(studentId: Int) {
+        dao.deleteStudent2(studentId)
+        dao.deletePaymentsForStudent2(studentId)
+    }
+
+    suspend fun updateStudent2(student: Student2Entity) {
+        dao.updateStudent2(student)
+    }
+
+    val monthHeaders2: Flow<List<MonthHeader2Entity>> = dao.getMonthHeaders2()
+
+    suspend fun saveMonthHeaders2(headers: List<MonthHeader2Entity>) {
+        dao.saveMonthHeaders2(headers)
+    }
+
+    val payments2: Flow<List<Payment2Entity>> = dao.getPayments2()
+
+    suspend fun savePayments2(payments: List<Payment2Entity>) {
+        dao.savePayments2(payments)
     }
 
     suspend fun importBackup(

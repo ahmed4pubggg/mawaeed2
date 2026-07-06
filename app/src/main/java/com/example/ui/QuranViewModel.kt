@@ -31,6 +31,11 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
     val appointmentCells: StateFlow<List<AppointmentCellEntity>>
     val payments: StateFlow<List<PaymentEntity>>
 
+    // Group 2 Flow States
+    val students2: StateFlow<List<Student2Entity>>
+    val monthHeaders2: StateFlow<List<MonthHeader2Entity>>
+    val payments2: StateFlow<List<Payment2Entity>>
+
     // Authentication State
     var isAuthenticated by mutableStateOf(false)
         private set
@@ -46,7 +51,7 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
     var draftCells by mutableStateOf<Map<Pair<Int, Int>, String>>(emptyMap())
         private set
 
-    // Draft State for Students & Payments Tab (Asma'a)
+    // Draft State for Students & Payments Tab (Asma'a) - Group 1
     var draftMonthHeaders by mutableStateOf<Map<Int, String>>(emptyMap())
         private set
     var draftPayments by mutableStateOf<Map<Pair<Int, Int>, Boolean>>(emptyMap())
@@ -54,6 +59,14 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
     var draftStudents by mutableStateOf<List<StudentEntity>>(emptyList())
     var deletedStudentIds by mutableStateOf<Set<Int>>(emptySet())
     var tableZoomScale by mutableStateOf(1.0f)
+
+    // Draft State for Students & Payments Tab - Group 2
+    var draftMonthHeaders2 by mutableStateOf<Map<Int, String>>(emptyMap())
+        private set
+    var draftPayments2 by mutableStateOf<Map<Pair<Int, Int>, Boolean>>(emptyMap())
+        private set
+    var draftStudents2 by mutableStateOf<List<Student2Entity>>(emptyList())
+    var deletedStudentIds2 by mutableStateOf<Set<Int>>(emptySet())
 
     // Alarm Configuration State
     var alarmEnabled by mutableStateOf(false)
@@ -108,6 +121,24 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
         )
 
         payments = repository.payments.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+        students2 = repository.students2.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+        monthHeaders2 = repository.monthHeaders2.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+        payments2 = repository.payments2.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
@@ -191,6 +222,27 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
             }
+            launch {
+                monthHeaders2.collect { list ->
+                    if (draftMonthHeaders2.isEmpty() && list.isNotEmpty()) {
+                        draftMonthHeaders2 = list.associate { it.monthIndex to it.name }
+                    }
+                }
+            }
+            launch {
+                payments2.collect { list ->
+                    if (draftPayments2.isEmpty() && list.isNotEmpty()) {
+                        draftPayments2 = list.associate { (it.studentId to it.monthIndex) to it.paid }
+                    }
+                }
+            }
+            launch {
+                students2.collect { list ->
+                    if (draftStudents2.isEmpty() && list.isNotEmpty()) {
+                        draftStudents2 = list
+                    }
+                }
+            }
         }
     }
 
@@ -225,6 +277,11 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
         draftPayments = payments.value.associate { (it.studentId to it.monthIndex) to it.paid }
         draftStudents = students.value
         deletedStudentIds = emptySet()
+
+        draftMonthHeaders2 = monthHeaders2.value.associate { it.monthIndex to it.name }
+        draftPayments2 = payments2.value.associate { (it.studentId to it.monthIndex) to it.paid }
+        draftStudents2 = students2.value
+        deletedStudentIds2 = emptySet()
     }
 
     // --- APPOINTMENTS (MAWA'EED) MUTATORS ---
@@ -412,6 +469,150 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
                 _uiEvent.emit("حدث خطأ أثناء حفظ البيانات: ${e.localizedMessage}")
             }
         }
+    }
+
+    // --- GROUP 2 MUTATORS ---
+
+    fun addStudent2(fullName: String) {
+        if (fullName.trim().isEmpty()) return
+        val newTempId = (draftStudents2.minOfOrNull { it.id } ?: 0).let { if (it < 0) it - 1 else -1 }
+        val newStudent = Student2Entity(id = newTempId, fullName = fullName.trim(), lastModified = System.currentTimeMillis())
+        draftStudents2 = draftStudents2 + newStudent
+        viewModelScope.launch {
+            _uiEvent.emit("تم إضافة الطالب مؤقتاً: ${fullName.trim()}. اضغط تثبيت لحفظ التغييرات!")
+        }
+    }
+
+    fun deleteStudent2(studentId: Int, studentName: String) {
+        draftStudents2 = draftStudents2.filter { it.id != studentId }
+        
+        // Clean from draft payments too
+        val updatedPayments = draftPayments2.toMutableMap()
+        val keysToRemove = updatedPayments.keys.filter { it.first == studentId }
+        keysToRemove.forEach { updatedPayments.remove(it) }
+        draftPayments2 = updatedPayments
+
+        if (studentId > 0) {
+            deletedStudentIds2 = deletedStudentIds2 + studentId
+        }
+        viewModelScope.launch {
+            _uiEvent.emit("تم حذف الطالب $studentName مؤقتاً. اضغط تثبيت لحفظ التغييرات!")
+        }
+    }
+
+    fun updateStudentName2(studentId: Int, newName: String) {
+        if (newName.trim().isEmpty()) return
+        draftStudents2 = draftStudents2.map {
+            if (it.id == studentId) {
+                it.copy(fullName = newName.trim(), lastModified = System.currentTimeMillis())
+            } else {
+                it
+            }
+        }
+        viewModelScope.launch {
+            _uiEvent.emit("تم تعديل الاسم مؤقتاً. اضغط تثبيت لحفظ التغييرات!")
+        }
+    }
+
+    fun updateDraftMonthHeader2(monthIndex: Int, newName: String) {
+        val updated = draftMonthHeaders2.toMutableMap()
+        updated[monthIndex] = newName
+        draftMonthHeaders2 = updated
+    }
+
+    fun toggleDraftPayment2(studentId: Int, monthIndex: Int) {
+        val updated = draftPayments2.toMutableMap()
+        val currentStatus = updated[studentId to monthIndex] ?: false
+        updated[studentId to monthIndex] = !currentStatus
+        draftPayments2 = updated
+    }
+
+    fun saveNamesAndPayments2() {
+        viewModelScope.launch {
+            try {
+                // 1. Save month headers
+                val monthEntities = draftMonthHeaders2.map { (index, name) ->
+                    MonthHeader2Entity(index, name)
+                }
+                repository.saveMonthHeaders2(monthEntities)
+
+                // 2. Delete removed students
+                deletedStudentIds2.forEach { id ->
+                    repository.deleteStudent2(id)
+                }
+
+                // 3. Save draft students (and map temp negative IDs to new autogenerated IDs)
+                val idMapping = mutableMapOf<Int, Int>()
+                draftStudents2.forEach { student ->
+                    if (student.id < 0) {
+                        val savedId = repository.saveStudent2(student.copy(id = 0))
+                        idMapping[student.id] = savedId.toInt()
+                    } else {
+                        repository.saveStudent2(student)
+                    }
+                }
+
+                // 4. Map draft payments to real IDs and save
+                val paymentEntities = draftPayments2.mapNotNull { (key, paid) ->
+                    val (tempStudentId, monthIndex) = key
+                    if (tempStudentId in deletedStudentIds2) return@mapNotNull null
+                    
+                    val realStudentId = if (tempStudentId < 0) {
+                        idMapping[tempStudentId] ?: return@mapNotNull null
+                    } else {
+                        tempStudentId
+                    }
+                    Payment2Entity(realStudentId, monthIndex, paid)
+                }
+                repository.savePayments2(paymentEntities)
+
+                // 5. Update draft state instantly with actual database IDs
+                val updatedDraftStudents = draftStudents2.map { student ->
+                    if (student.id < 0) {
+                        student.copy(id = idMapping[student.id] ?: 0)
+                    } else {
+                        student
+                    }
+                }.filter { it.id > 0 }
+                
+                draftStudents2 = updatedDraftStudents
+                deletedStudentIds2 = emptySet()
+
+                // Update draft payments with real IDs
+                val updatedDraftPayments = draftPayments2.mapKeys { (key, _) ->
+                    val (tempId, monthIndex) = key
+                    val realId = if (tempId < 0) idMapping[tempId] ?: tempId else tempId
+                    realId to monthIndex
+                }.filterKeys { it.first > 0 }
+                draftPayments2 = updatedDraftPayments
+
+            } catch (e: Exception) {
+                _uiEvent.emit("حدث خطأ أثناء حفظ البيانات: ${e.localizedMessage}")
+            }
+        }
+    }
+
+    fun verifyPasswordAndSave2(
+        password: String,
+        onSuccess: () -> Unit,
+        onFailure: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            val correctPassword = repository.getPassword()
+            if (password == correctPassword) {
+                saveNamesAndPayments2()
+                onSuccess()
+            } else {
+                onFailure("كلمة السر غير صحيحة، يرجى المحاولة مرة أخرى")
+            }
+        }
+    }
+
+    fun revertNamesAndPayments2() {
+        draftMonthHeaders2 = monthHeaders2.value.associate { it.monthIndex to it.name }
+        draftPayments2 = payments2.value.associate { (it.studentId to it.monthIndex) to it.paid }
+        draftStudents2 = students2.value
+        deletedStudentIds2 = emptySet()
     }
 
     // --- PASSWORD MANAGEMENT ---

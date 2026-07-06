@@ -62,3 +62,32 @@ data class PaymentEntity(
     val monthIndex: Int,
     val paid: Boolean
 )
+
+/**
+ * Entity to store Quran student names for Group 2.
+ */
+@Entity(tableName = "students2")
+data class Student2Entity(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val fullName: String,
+    val lastModified: Long = System.currentTimeMillis()
+)
+
+/**
+ * Entity to store the custom names of the months for Group 2.
+ */
+@Entity(tableName = "month_headers2")
+data class MonthHeader2Entity(
+    @PrimaryKey val monthIndex: Int,
+    val name: String
+)
+
+/**
+ * Entity to store whether a student has paid for a particular month for Group 2.
+ */
+@Entity(tableName = "payments2", primaryKeys = ["studentId", "monthIndex"])
+data class Payment2Entity(
+    val studentId: Int,
+    val monthIndex: Int,
+    val paid: Boolean
+)
