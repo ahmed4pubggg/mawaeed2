@@ -80,6 +80,15 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
     var draftAlarmRingtoneUri by mutableStateOf<String?>(null)
     var draftAlarmTimes by mutableStateOf<Map<Int, String>>(emptyMap())
 
+    private var isHourHeadersLoaded = false
+    private var isCellsLoaded = false
+    private var isMonthHeadersLoaded = false
+    private var isPaymentsLoaded = false
+    private var isStudentsLoaded = false
+    private var isMonthHeaders2Loaded = false
+    private var isPayments2Loaded = false
+    private var isStudents2Loaded = false
+
     // Password Management Fields
     var oldPasswordInput by mutableStateOf("")
     var newPasswordInput by mutableStateOf("")
@@ -180,15 +189,17 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
             // Gather and setup initial drafts from db
             launch {
                 hourHeaders.collect { list ->
-                    if (draftHourHeaders.isEmpty() && list.isNotEmpty()) {
+                    if (!isHourHeadersLoaded && list.isNotEmpty()) {
                         draftHourHeaders = list.associate { it.hourIndex to it.name }
+                        isHourHeadersLoaded = true
                     }
                 }
             }
             launch {
                 appointmentCells.collect { list ->
-                    if (draftCells.isEmpty() && list.isNotEmpty()) {
+                    if (!isCellsLoaded && list.isNotEmpty()) {
                         draftCells = list.associate { (it.dayIndex to it.hourIndex) to it.content }
+                        isCellsLoaded = true
                         if (alarmEnabled) {
                             AlarmScheduler.scheduleAlarms(
                                 getApplication(),
@@ -203,43 +214,49 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
             }
             launch {
                 monthHeaders.collect { list ->
-                    if (draftMonthHeaders.isEmpty() && list.isNotEmpty()) {
+                    if (!isMonthHeadersLoaded && list.isNotEmpty()) {
                         draftMonthHeaders = list.associate { it.monthIndex to it.name }
+                        isMonthHeadersLoaded = true
                     }
                 }
             }
             launch {
                 payments.collect { list ->
-                    if (draftPayments.isEmpty() && list.isNotEmpty()) {
+                    if (!isPaymentsLoaded && list.isNotEmpty()) {
                         draftPayments = list.associate { (it.studentId to it.monthIndex) to it.paid }
+                        isPaymentsLoaded = true
                     }
                 }
             }
             launch {
                 students.collect { list ->
-                    if (draftStudents.isEmpty() && list.isNotEmpty()) {
+                    if (!isStudentsLoaded && list.isNotEmpty()) {
                         draftStudents = list
+                        isStudentsLoaded = true
                     }
                 }
             }
             launch {
                 monthHeaders2.collect { list ->
-                    if (draftMonthHeaders2.isEmpty() && list.isNotEmpty()) {
+                    if (!isMonthHeaders2Loaded && list.isNotEmpty()) {
                         draftMonthHeaders2 = list.associate { it.monthIndex to it.name }
+                        isMonthHeaders2Loaded = true
                     }
                 }
             }
             launch {
                 payments2.collect { list ->
-                    if (draftPayments2.isEmpty() && list.isNotEmpty()) {
+                    if (!isPayments2Loaded && list.isNotEmpty()) {
                         draftPayments2 = list.associate { (it.studentId to it.monthIndex) to it.paid }
+                        isPayments2Loaded = true
                     }
                 }
             }
             launch {
                 students2.collect { list ->
-                    if (draftStudents2.isEmpty() && list.isNotEmpty()) {
+                    if (!isStudents2Loaded && list.isNotEmpty()) {
                         draftStudents2 = list
+                        isStudents2Loaded = true
                     }
                 }
             }
