@@ -10,6 +10,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -108,14 +109,38 @@ fun AlarmScreen(
     onSnooze: () -> Unit
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    
+    // Scale animation for the main alarm circle
     val scale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.25f,
+        initialValue = 0.95f,
+        targetValue = 1.15f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = FastOutSlowInEasing),
+            animation = tween(1200, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
         label = "pulseScale"
+    )
+
+    // Soft rotation animation for the background Islamic patterns
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(40000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "bgRotation"
+    )
+
+    // Pulsing aura opacity
+    val auraAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.15f,
+        targetValue = 0.45f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "auraAlpha"
     )
 
     val formattedTime = remember(time) {
@@ -145,157 +170,233 @@ fun AlarmScreen(
             .background(
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        Color(0xFF031412), // Extremely deep pine night
-                        Color(0xFF092C28), // Deep rich pine teal
-                        Color(0xFF031412)  // Back to extremely deep pine
+                        Color(0xFF001F1A), // Extremely rich deep forest green
+                        Color(0xFF003D33), // Deep teal
+                        Color(0xFF00120F)  // Dark shadowed green
                     )
                 )
             ),
         contentAlignment = Alignment.Center
     ) {
+        // Decorative Animated Background Elements (Islamic Geometric Stars)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Alarm, // Using it dynamically as a shape or we can use custom icons
+                contentDescription = null,
+                tint = Color(0xFFFFD54F).copy(alpha = 0.03f),
+                modifier = Modifier
+                    .size(450.dp)
+                    .scale(scale * 1.2f)
+            )
+        }
+
         Column(
             modifier = Modifier
-                .fillMaxWidth(0.9f)
-                .padding(24.dp),
+                .fillMaxWidth(0.92f)
+                .padding(horizontal = 20.dp, vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Alarm icon container with pulsing gold aura
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Glowing Pulsing Circular Header Group
             Box(
-                modifier = Modifier
-                    .size(130.dp)
-                    .scale(scale)
-                    .background(GoldAccent.copy(alpha = 0.25f), shape = CircleShape),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.size(170.dp)
             ) {
+                // Outer gold aura ring 1
                 Box(
                     modifier = Modifier
-                        .size(90.dp)
-                        .background(GoldAccent, shape = CircleShape),
+                        .size(160.dp)
+                        .scale(scale)
+                        .background(
+                            brush = Brush.radialGradient(
+                                colors = listOf(Color(0xFFFFD54F).copy(alpha = auraAlpha), Color.Transparent)
+                            ),
+                            shape = CircleShape
+                        )
+                )
+
+                // Outer gold aura ring 2
+                Box(
+                    modifier = Modifier
+                        .size(130.dp)
+                        .background(Color(0xFF004D40), shape = CircleShape)
+                        .border(BorderStroke(2.dp, Color(0xFFFFD54F).copy(alpha = 0.6f)), CircleShape)
+                )
+
+                // Central high-contrast gold coin
+                Box(
+                    modifier = Modifier
+                        .size(96.dp)
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(Color(0xFFFFD54F), Color(0xFFFFB300))
+                            ),
+                            shape = CircleShape
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Alarm,
                         contentDescription = "المنبه",
-                        tint = Color(0xFF031412),
-                        modifier = Modifier.size(48.dp)
+                        tint = Color(0xFF001F1A),
+                        modifier = Modifier.size(50.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
+            // Title Header with proper typography hierarchy
             Text(
-                text = "تَنْبِيه مَوْعِد الحِصَّة",
-                style = MaterialTheme.typography.headlineLarge.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    letterSpacing = 1.sp
+                text = "⏱️ حَانَ الآنَ مَوْعِدُ الحِصَّةِ",
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color(0xFFFFD54F),
+                    fontSize = 21.sp,
+                    letterSpacing = 0.5.sp
                 ),
                 textAlign = TextAlign.Center
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Elegant Card showing detail of slot - styled with high contrast deep background and enlarged text
+            // Premium Glassmorphic Card (Deep translucent teal background with thick gold accents)
             Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF051C1A).copy(alpha = 0.95f)),
-                shape = RoundedCornerShape(24.dp),
-                border = BorderStroke(2.5.dp, GoldAccent)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(
+                        border = BorderStroke(1.5.dp, Brush.verticalGradient(listOf(Color(0xFFFFD54F), Color(0xFF00796B)))),
+                        shape = RoundedCornerShape(28.dp)
+                    ),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFF002520).copy(alpha = 0.88f)
+                ),
+                shape = RoundedCornerShape(28.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
             ) {
                 Column(
                     modifier = Modifier
-                        .padding(24.dp)
+                        .padding(26.dp)
                         .fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    Text(
-                        text = "يوم $day • الساعة $formattedTime",
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontSize = 22.sp,
-                            color = Color(0xFFFFD54F), // High-visibility bright yellow-gold
-                            fontWeight = FontWeight.ExtraBold,
-                            letterSpacing = 0.5.sp
-                        ),
-                        textAlign = TextAlign.Center
-                    )
+                    // Date & Time badge with custom visual weight
+                    Box(
+                        modifier = Modifier
+                            .background(Color(0xFF004D40), shape = RoundedCornerShape(12.dp))
+                            .border(BorderStroke(1.dp, Color(0xFFFFD54F).copy(alpha = 0.3f)), RoundedCornerShape(12.dp))
+                            .padding(horizontal = 14.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            text = "يَوْمُ $day • السَّاعَةُ $formattedTime",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontSize = 16.sp,
+                                color = Color(0xFFFFD54F),
+                                fontWeight = FontWeight.Bold
+                            ),
+                            textAlign = TextAlign.Center
+                        )
+                    }
 
-                    Spacer(modifier = Modifier.height(14.dp))
-
+                    // Main Appointment Text in extremely bold, crisp and huge size
                     Text(
                         text = text,
                         style = MaterialTheme.typography.headlineLarge.copy(
-                            fontSize = 32.sp,
+                            fontSize = 28.sp,
                             color = Color.White,
                             fontWeight = FontWeight.Black,
-                            letterSpacing = 0.5.sp
+                            lineHeight = 38.sp
                         ),
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(top = 4.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(36.dp))
 
-            // Dismiss Button
-            Button(
-                onClick = onStop,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = GoldAccent,
-                    contentColor = Color(0xFF031412)
-                ),
-                elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp),
-                shape = RoundedCornerShape(24.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(60.dp)
+            // Action Buttons Group (Interactive & Polished layout)
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(
-                    text = "إِيقَاف التَّنْبِيه",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 18.sp,
-                        letterSpacing = 1.sp
-                    )
-                )
-            }
+                // Dismiss / Stop Button (Prominent Gold Accent)
+                Button(
+                    onClick = onStop,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFFFD54F),
+                        contentColor = Color(0xFF001F1A)
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(
+                        defaultElevation = 8.dp,
+                        pressedElevation = 2.dp
+                    ),
+                    shape = RoundedCornerShape(18.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(58.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        Text(
+                            text = "🛑 إِيقَافُ التَّنْبِيهِ",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Black,
+                                fontSize = 17.sp
+                            )
+                        )
+                    }
+                }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Snooze Button
-            Button(
-                onClick = onSnooze,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF80CBC4), // Beautiful mint green
-                    contentColor = Color(0xFF031412)  // Contrast text color
-                ),
-                elevation = ButtonDefaults.buttonElevation(defaultElevation = 6.dp),
-                shape = RoundedCornerShape(24.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(60.dp)
-            ) {
-                Text(
-                    text = "تَأْجِيل (10 دَقَائِق)",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 17.sp,
-                        letterSpacing = 1.sp
-                    )
-                )
+                // Snooze Button (Sleek Glassmorphic Outlined Button)
+                OutlinedButton(
+                    onClick = onSnooze,
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = Color(0xFF80CBC4)
+                    ),
+                    border = BorderStroke(1.5.dp, Color(0xFF80CBC4)),
+                    shape = RoundedCornerShape(18.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(54.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        Text(
+                            text = "💤 تَأْجِيلٌ (١٠ دَقَائِق)",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp
+                            )
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            // Rights Credit Label
+            // Sheikh Ahmed El Nems Signature / Rights Credit Label
             Text(
-                text = "بواسطة الشيخ أحمد النمس غفر الله له",
+                text = "بواسطة الشيخ أحمد النمس غفر الله له ولوالديه",
                 style = MaterialTheme.typography.bodyMedium.copy(
-                    color = Color(0xFFFFECB3), // Warm light gold
+                    color = Color(0xFFFFE082),
                     fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp,
-                    letterSpacing = 0.5.sp
+                    fontSize = 13.sp
                 ),
                 textAlign = TextAlign.Center
             )

@@ -637,39 +637,7 @@ fun AppointmentsTab(viewModel: QuranViewModel) {
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Instructions / Info Card
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f) else LightTeal.copy(alpha = 0.3f)
-                ),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Info,
-                        contentDescription = "تنبيه",
-                        tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "اضغط على الساعات في الأعلى لتعديل توقيتها، واضغط على أي مربع لتعديل المجموعات أو الطلاب. عند الانتهاء اضغط زر التثبيت.",
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            color = if (isSystemInDarkTheme()) LightText else DarkTeal,
-                            fontWeight = FontWeight.Medium
-                        ),
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-
-            ZoomControls(viewModel = viewModel)
+             ZoomControls(viewModel = viewModel)
 
             // Outer Schedule Layout (RTL-Native structure) with Sticky Headers & Days Column
             Column(
@@ -1164,6 +1132,9 @@ fun StudentsTab(viewModel: QuranViewModel, isGroup2: Boolean = false) {
     }
     var editingStudentInput by rememberSaveable { mutableStateOf("") }
 
+    var showTransferDialog by rememberSaveable { mutableStateOf(false) }
+    var selectedStudentIdsToTransfer by remember { mutableStateOf(setOf<Int>()) }
+
     var editingMonthIndex by rememberSaveable { mutableStateOf<Int?>(null) }
     var editingMonthCurrentValue by rememberSaveable { mutableStateOf("") }
 
@@ -1252,6 +1223,32 @@ fun StudentsTab(viewModel: QuranViewModel, isGroup2: Boolean = false) {
                         unfocusedContainerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surface.copy(alpha = 0.7f) else Color.White
                     )
                 )
+
+                // Transfer Students Button (Requirement: easily move students between tabs)
+                IconButton(
+                    onClick = { 
+                        selectedStudentIdsToTransfer = emptySet()
+                        showTransferDialog = true 
+                    },
+                    modifier = Modifier
+                        .size(50.dp)
+                        .background(
+                            color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surfaceVariant else LightTeal.copy(alpha = 0.15f),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        .border(
+                            width = 1.dp,
+                            color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.outlineVariant else MediumTeal.copy(alpha = 0.3f),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.SwapHoriz,
+                        contentDescription = "نقل الطلاب",
+                        tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
 
                 // Sort Dropdown Box
                 var sortMenuExpanded by remember { mutableStateOf(false) }
@@ -2055,6 +2052,149 @@ fun StudentsTab(viewModel: QuranViewModel, isGroup2: Boolean = false) {
                 }
             }
         }
+
+        // 5. Transfer Student Names Dialog
+        if (showTransferDialog) {
+            val destinationTabName = if (isGroup2) "شؤون 1" else "شؤون 2"
+            AlertDialog(
+                onDismissRequest = { showTransferDialog = false },
+                title = {
+                    Text(
+                        text = "نقل الطلاب إلى $destinationTabName",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                        textAlign = TextAlign.Right,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                },
+                text = {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 300.dp),
+                        horizontalAlignment = Alignment.End
+                    ) {
+                        Text(
+                            text = "اختر الطلاب الذين تود نقل أسمائهم إلى $destinationTabName بدون إعادة كتابتهم:",
+                            fontSize = 13.sp,
+                            textAlign = TextAlign.Right,
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                        )
+
+                        // Select All Row
+                        val allSelected = draftStudents.isNotEmpty() && selectedStudentIdsToTransfer.size == draftStudents.size
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    selectedStudentIdsToTransfer = if (allSelected) {
+                                        emptySet()
+                                    } else {
+                                        draftStudents.map { it.id }.toSet()
+                                    }
+                                }
+                                .padding(vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            Text(
+                                text = "تحديد جميع الطلاب",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
+                            Checkbox(
+                                checked = allSelected,
+                                onCheckedChange = { checked ->
+                                    selectedStudentIdsToTransfer = if (checked) {
+                                        draftStudents.map { it.id }.toSet()
+                                    } else {
+                                        emptySet()
+                                    }
+                                }
+                            )
+                        }
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                        // Scrollable List of students
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth()
+                                .verticalScroll(rememberScrollState()),
+                            horizontalAlignment = Alignment.End
+                        ) {
+                            draftStudents.forEach { student ->
+                                val isSelected = selectedStudentIdsToTransfer.contains(student.id)
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            selectedStudentIdsToTransfer = if (isSelected) {
+                                                selectedStudentIdsToTransfer - student.id
+                                            } else {
+                                                selectedStudentIdsToTransfer + student.id
+                                            }
+                                        }
+                                        .padding(vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.End
+                                ) {
+                                    Text(
+                                        text = student.fullName,
+                                        fontSize = 13.sp,
+                                        modifier = Modifier.padding(end = 8.dp)
+                                    )
+                                    Checkbox(
+                                        checked = isSelected,
+                                        onCheckedChange = { checked ->
+                                            selectedStudentIdsToTransfer = if (checked) {
+                                                selectedStudentIdsToTransfer + student.id
+                                            } else {
+                                                selectedStudentIdsToTransfer - student.id
+                                            }
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            val namesToCopy = draftStudents
+                                .filter { selectedStudentIdsToTransfer.contains(it.id) }
+                                .map { it.fullName }
+                            if (isGroup2) {
+                                viewModel.copyStudentsToGroup1(namesToCopy)
+                            } else {
+                                viewModel.copyStudentsToGroup2(namesToCopy)
+                            }
+                            showTransferDialog = false
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal
+                        ),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("نقل", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                },
+                dismissButton = {
+                    OutlinedButton(
+                        onClick = { showTransferDialog = false },
+                        border = BorderStroke(1.dp, if (isSystemInDarkTheme()) MaterialTheme.colorScheme.outline else MediumTeal),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("إلغاء", fontSize = 12.sp)
+                    }
+                }
+            )
+        }
     }
 }
 
@@ -2799,7 +2939,7 @@ fun AlarmSettingsDialog(
                         ) {
                             Button(
                                 onClick = {
-                                    val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+                                    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
                                         type = "audio/*"
                                         addCategory(Intent.CATEGORY_OPENABLE)
                                     }
@@ -2940,7 +3080,10 @@ fun AlarmSettingsDialog(
         },
         confirmButton = {
             Button(
-                onClick = onDismiss,
+                onClick = {
+                    viewModel.saveAppointments()
+                    onDismiss()
+                },
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal
                 ),

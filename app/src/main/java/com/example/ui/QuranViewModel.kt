@@ -483,6 +483,52 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun copyStudentsToGroup2(studentNames: List<String>) {
+        if (studentNames.isEmpty()) return
+        var currentDraft = draftStudents2.toMutableList()
+        var addedCount = 0
+        studentNames.forEach { name ->
+            val cleanedName = name.trim()
+            if (cleanedName.isNotEmpty() && currentDraft.none { it.fullName.equals(cleanedName, ignoreCase = true) }) {
+                val newTempId = (currentDraft.minOfOrNull { it.id } ?: 0).let { if (it < 0) it - 1 else -1 }
+                val newStudent = Student2Entity(id = newTempId, fullName = cleanedName, lastModified = System.currentTimeMillis())
+                currentDraft.add(newStudent)
+                addedCount++
+            }
+        }
+        draftStudents2 = currentDraft
+        viewModelScope.launch {
+            if (addedCount > 0) {
+                _uiEvent.emit("تم نقل $addedCount من الطلاب إلى شؤون 2 مؤقتاً. اذهب إلى شؤون 2 واضغط تثبيت لحفظ التغييرات!")
+            } else {
+                _uiEvent.emit("الطلاب المحددون موجودون بالفعل في شؤون 2!")
+            }
+        }
+    }
+
+    fun copyStudentsToGroup1(studentNames: List<String>) {
+        if (studentNames.isEmpty()) return
+        var currentDraft = draftStudents.toMutableList()
+        var addedCount = 0
+        studentNames.forEach { name ->
+            val cleanedName = name.trim()
+            if (cleanedName.isNotEmpty() && currentDraft.none { it.fullName.equals(cleanedName, ignoreCase = true) }) {
+                val newTempId = (currentDraft.minOfOrNull { it.id } ?: 0).let { if (it < 0) it - 1 else -1 }
+                val newStudent = StudentEntity(id = newTempId, fullName = cleanedName, lastModified = System.currentTimeMillis())
+                currentDraft.add(newStudent)
+                addedCount++
+            }
+        }
+        draftStudents = currentDraft
+        viewModelScope.launch {
+            if (addedCount > 0) {
+                _uiEvent.emit("تم نقل $addedCount من الطلاب إلى شؤون 1 مؤقتاً. اذهب إلى شؤون 1 واضغط تثبيت لحفظ التغييرات!")
+            } else {
+                _uiEvent.emit("الطلاب المحددون موجودون بالفعل في شؤون 1!")
+            }
+        }
+    }
+
     fun deleteStudent2(studentId: Int, studentName: String) {
         draftStudents2 = draftStudents2.filter { it.id != studentId }
         
