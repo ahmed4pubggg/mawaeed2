@@ -1357,6 +1357,35 @@ fun StudentsTab(viewModel: QuranViewModel, isGroup2: Boolean = false) {
                         )
                     }
                 }
+
+                // Delete All Students Icon Button (Protected by Password)
+                if (draftStudents.isNotEmpty()) {
+                    IconButton(
+                        onClick = {
+                            deleteAllPasswordInput = ""
+                            deleteAllPasswordError = null
+                            isConfirmingDeleteAllByPassword = true
+                        },
+                        modifier = Modifier
+                            .size(50.dp)
+                            .background(
+                                color = if (isSystemInDarkTheme()) Color(0xFFEF5350).copy(alpha = 0.15f) else Color(0xFFD32F2F).copy(alpha = 0.1f),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            .border(
+                                width = 1.dp,
+                                color = if (isSystemInDarkTheme()) Color(0xFFEF5350).copy(alpha = 0.5f) else Color(0xFFD32F2F).copy(alpha = 0.4f),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.DeleteSweep,
+                            contentDescription = "حذف جميع الطلاب",
+                            tint = if (isSystemInDarkTheme()) Color(0xFFEF5350) else Color(0xFFD32F2F),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
             }
 
             if (draftStudents.isEmpty()) {
@@ -1660,28 +1689,6 @@ fun StudentsTab(viewModel: QuranViewModel, isGroup2: Boolean = false) {
                         Icon(Icons.Filled.Add, contentDescription = "إضافة طالب", modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
                         Text("+ إضافة", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    }
-
-                    // Delete All Button (Protected by Password)
-                    if (draftStudents.isNotEmpty()) {
-                        OutlinedButton(
-                            onClick = {
-                                deleteAllPasswordInput = ""
-                                deleteAllPasswordError = null
-                                isConfirmingDeleteAllByPassword = true
-                            },
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = if (isSystemInDarkTheme()) Color(0xFFEF5350) else Color(0xFFD32F2F)
-                            ),
-                            border = BorderStroke(1.dp, if (isSystemInDarkTheme()) Color(0xFFEF5350) else Color(0xFFD32F2F)),
-                            shape = RoundedCornerShape(10.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                            modifier = Modifier.height(38.dp)
-                        ) {
-                            Icon(Icons.Filled.DeleteSweep, contentDescription = "حذف جميع الطلاب", modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("حذف الكل", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                        }
                     }
 
                     // Status indicator without enclosing badge box, keeping standard text and red/green colors

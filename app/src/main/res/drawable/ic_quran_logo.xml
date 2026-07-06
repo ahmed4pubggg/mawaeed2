@@ -1,81 +1,66 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- 1. Rich Medallion Deep Teal-to-Emerald Gradient Background (covers 100% of viewport) -->
-    <path
-        android:pathData="M54,54m-54,0a54,54 0,1 1,108 0a54,54 0,1 1,-108 0">
-        <aapt:attr name="android:fillColor">
-            <gradient
-                android:startX="0"
-                android:startY="0"
-                android:endX="108"
-                android:endY="108"
-                android:type="linear">
-                <item android:offset="0.0" android:color="#002D26" />
-                <item android:offset="0.5" android:color="#004D40" />
-                <item android:offset="1.0" android:color="#00796B" />
-            </gradient>
-        </aapt:attr>
-    </path>
-
-    <!-- 2. Outer Decorative Gold Circular Ring -->
-    <path
-        android:strokeColor="#FFD54F"
-        android:strokeWidth="2"
-        android:pathData="M54,54m-48,0a48,48 0,1 1,96 0a48,48 0,1 1,-96 0" />
-
-    <!-- 3. Islamic Pattern Octagram (Rub el Hizb) Outer Frame -->
+    <!-- 1. Outer Elegant Double Gold Circular Ring (No Stars) -->
+    <!-- Outer Ring -->
     <path
         android:strokeColor="#FFD54F"
         android:strokeWidth="2.5"
-        android:strokeLineJoin="round"
-        android:strokeLineCap="round"
-        android:pathData="M54,16 L65.5,27.5 L82,27.5 L82,44 L94,54 L82,64 L82,80.5 L65.5,80.5 L54,92 L42.5,80.5 L26,80.5 L26,64 L14,54 L26,44 L26,27.5 L42.5,27.5 Z" />
+        android:pathData="M54,54m-45,0a45,45 0,1 1,90 0a45,45 0,1 1,-90 0" />
 
-    <!-- 4. Inner Circle Medallion Frame -->
+    <!-- Inner Ring -->
     <path
         android:strokeColor="#FFC107"
         android:strokeWidth="1.5"
-        android:pathData="M54,54m-32,0a32,32 0,1 1,64 0a32,32 0,1 1,-64 0" />
+        android:pathData="M54,54m-38,0a38,38 0,1 1,76 0a38,38 0,1 1,-76 0" />
 
-    <!-- 5. Open Holy Quran Pages (Pristine White with subtle gold shading) -->
+    <!-- 2. Crescent Moon above the Quran (No Stars) -->
+    <path
+        android:fillColor="#FFD54F"
+        android:pathData="M54,21 C50.1,21 47,24.1 47,28 C47,31.9 50.1,35 54,35 C56.3,35 58.3,33.9 59.5,32.2 C57.0,32.5 54.6,30.8 54.6,28 C54.6,25.2 57.0,23.5 59.5,23.8 C58.3,22.1 56.3,21 54,21 Z" />
+
+    <!-- 3. Open Holy Quran Pages (Pristine White with subtle gold shading) -->
+    <!-- Left Page -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M54,58 C44.5,50 36,50 28,53.5 L28,39.5 C36,36 44.5,36 54,44 C63.5,36 72,36 80,39.5 L80,53.5 C72,50 63.5,50 54,58 Z" />
+        android:pathData="M54,58 C45,51 37,51 29,54 L29,41 C37,38 45,38 54,45 Z" />
 
-    <!-- 6. Quran Book Spine Inner Line (Gold) -->
+    <!-- Right Page -->
     <path
-        android:strokeColor="#FFD54F"
-        android:strokeWidth="1.2"
-        android:pathData="M54,44 L54,58" />
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,58 C63,51 71,51 79,54 L79,41 C71,38 63,38 54,45 Z" />
 
-    <!-- 7. Quran Stand / Rehal (Gold) -->
+    <!-- Page Gold Edge Lines -->
+    <path
+        android:strokeColor="#FFC107"
+        android:strokeWidth="1.2"
+        android:pathData="M29,41 C37,38 45,38 54,45 C63,38 71,38 79,41" />
+    <path
+        android:strokeColor="#FFC107"
+        android:strokeWidth="1.2"
+        android:pathData="M29,54 C37,51 45,51 54,58 C63,51 71,51 79,54" />
+
+    <!-- 4. Quran Book Spine Center Line -->
+    <path
+        android:strokeColor="#FFC107"
+        android:strokeWidth="1.5"
+        android:pathData="M54,45 L54,58" />
+
+    <!-- 5. Quran Stand / Rehal (Gold/Amber) with 3D shadow shading -->
     <path
         android:fillColor="#FFD54F"
-        android:pathData="M54,58 L42,70 L32,70 L47,55.5 Z" />
+        android:pathData="M54,58 L42,70 L34,70 L48,56 Z" />
     <path
         android:fillColor="#FFB300"
-        android:pathData="M54,58 L66,70 L76,70 L61,55.5 Z" />
+        android:pathData="M54,58 L66,70 L74,70 L60,56 Z" />
 
-    <!-- 8. Center Bookmark Ribbon (Gold Accent) -->
+    <!-- 6. Center Bookmark Ribbon (Elegant Red Accent) -->
     <path
-        android:fillColor="#E53935"
-        android:pathData="M53,46 h2 v18 L54,62.5 L53,64 Z" />
-
-    <!-- 9. Elegant Crescent and Star above the Quran -->
-    <!-- Crescent -->
-    <path
-        android:fillColor="#FFD54F"
-        android:pathData="M54,23.5 C51,23.5 48.5,26 48.5,29 C48.5,32 51,34.5 54,34.5 C55.8,34.5 57.3,33.5 58.2,32.2 C56.2,32.5 54.3,31.2 54.3,29 C54.3,26.8 56.2,25.5 58.2,25.8 C57.3,24.5 55.8,23.5 54,23.5 Z" />
-
-    <!-- Little Star next to crescent -->
-    <path
-        android:fillColor="#FFD54F"
-        android:pathData="M60.5,27.5 L61.2,29 L62.7,29.2 L61.6,30.3 L61.9,31.8 L60.5,31 L59.1,31.8 L59.4,30.3 L58.3,29.2 L59.8,29 Z" />
+        android:fillColor="#D32F2F"
+        android:pathData="M53.2,45 h1.6 v17 L54,60.5 L53.2,62 Z" />
 
 </vector>
