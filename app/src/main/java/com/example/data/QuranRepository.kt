@@ -21,6 +21,10 @@ class QuranRepository(private val dao: QuranDao) {
         dao.saveConfig(ConfigEntity(key, value))
     }
 
+    suspend fun getAllConfigs(): List<ConfigEntity> {
+        return dao.getAllConfigs()
+    }
+
     // Hour Headers
     val hourHeaders: Flow<List<HourHeaderEntity>> = dao.getHourHeaders()
 
@@ -135,18 +139,36 @@ class QuranRepository(private val dao: QuranDao) {
         dao.savePayments2(payments)
     }
 
+    suspend fun deleteAllStudentsAndPayments1() {
+        dao.deleteAllStudents()
+        dao.deleteAllPayments()
+    }
+
+    suspend fun deleteAllStudentsAndPayments2() {
+        dao.deleteAllStudents2()
+        dao.deleteAllPayments2()
+    }
+
     suspend fun importBackup(
         studentsList: List<StudentEntity>,
         hourHeadersList: List<HourHeaderEntity>,
         appointmentCellsList: List<AppointmentCellEntity>,
         monthHeadersList: List<MonthHeaderEntity>,
-        paymentsList: List<PaymentEntity>
+        paymentsList: List<PaymentEntity>,
+        students2List: List<Student2Entity>,
+        monthHeaders2List: List<MonthHeader2Entity>,
+        payments2List: List<Payment2Entity>,
+        configsList: List<ConfigEntity>
     ) {
         dao.deleteAllStudents()
         dao.deleteAllHourHeaders()
         dao.deleteAllAppointmentCells()
         dao.deleteAllMonthHeaders()
         dao.deleteAllPayments()
+
+        dao.deleteAllStudents2()
+        dao.deleteAllMonthHeaders2()
+        dao.deleteAllPayments2()
 
         if (studentsList.isNotEmpty()) {
             studentsList.forEach { dao.saveStudent(it) }
@@ -162,6 +184,22 @@ class QuranRepository(private val dao: QuranDao) {
         }
         if (paymentsList.isNotEmpty()) {
             dao.savePayments(paymentsList)
+        }
+
+        if (students2List.isNotEmpty()) {
+            students2List.forEach { dao.saveStudent2(it) }
+        }
+        if (monthHeaders2List.isNotEmpty()) {
+            dao.saveMonthHeaders2(monthHeaders2List)
+        }
+        if (payments2List.isNotEmpty()) {
+            dao.savePayments2(payments2List)
+        }
+
+        configsList.forEach { config ->
+            if (config.key != "password") {
+                dao.saveConfig(config)
+            }
         }
     }
 }

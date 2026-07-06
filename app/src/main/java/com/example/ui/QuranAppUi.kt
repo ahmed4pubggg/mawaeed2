@@ -179,7 +179,7 @@ fun LoginScreen(viewModel: QuranViewModel) {
                 colors = CardDefaults.cardColors(containerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primaryContainer else DarkTeal)
             ) {
                 Image(
-                    painter = painterResource(id = R.drawable.ic_quran_logo),
+                    painter = painterResource(id = R.drawable.app_logo),
                     contentDescription = "شعار المواعيد",
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
@@ -393,7 +393,7 @@ fun MainAppScreen(viewModel: QuranViewModel) {
                 containerColor = MaterialTheme.colorScheme.surface,
                 header = {
                     Image(
-                        painter = painterResource(id = R.drawable.ic_quran_logo),
+                        painter = painterResource(id = R.drawable.app_logo),
                         contentDescription = "شعار",
                         modifier = Modifier
                             .size(36.dp)
@@ -485,7 +485,7 @@ fun MainAppScreen(viewModel: QuranViewModel) {
                         horizontalArrangement = Arrangement.Center
                     ) {
                         Image(
-                            painter = painterResource(id = R.drawable.ic_quran_logo),
+                            painter = painterResource(id = R.drawable.app_logo),
                             contentDescription = "شعار",
                             modifier = Modifier
                                 .size(36.dp)
@@ -2396,6 +2396,7 @@ fun PasswordTab(viewModel: QuranViewModel) {
                     val bytes = inputStream.readBytes()
                     val jsonString = String(bytes, Charsets.UTF_8)
                     viewModel.importBackupJsonString(
+                        context = context,
                         jsonString = jsonString,
                         onSuccess = {
                             Toast.makeText(context, "تم استعادة النسخة الاحتياطية بنجاح!", Toast.LENGTH_LONG).show()

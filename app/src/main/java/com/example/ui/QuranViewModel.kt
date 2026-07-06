@@ -787,6 +787,7 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
         val root = org.json.JSONObject()
         root.put("backup_version", 1)
 
+        // Group 1 Students
         val studentsArray = org.json.JSONArray()
         students.value.forEach {
             val obj = org.json.JSONObject()
@@ -797,6 +798,7 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
         }
         root.put("students", studentsArray)
 
+        // Hour Headers
         val hourHeadersArray = org.json.JSONArray()
         hourHeaders.value.forEach {
             val obj = org.json.JSONObject()
@@ -806,6 +808,7 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
         }
         root.put("hour_headers", hourHeadersArray)
 
+        // Group 1 Month Headers
         val monthHeadersArray = org.json.JSONArray()
         monthHeaders.value.forEach {
             val obj = org.json.JSONObject()
@@ -815,6 +818,7 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
         }
         root.put("month_headers", monthHeadersArray)
 
+        // Appointment Cells
         val appointmentCellsArray = org.json.JSONArray()
         appointmentCells.value.forEach {
             val obj = org.json.JSONObject()
@@ -825,6 +829,7 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
         }
         root.put("appointment_cells", appointmentCellsArray)
 
+        // Group 1 Payments
         val paymentsArray = org.json.JSONArray()
         payments.value.forEach {
             val obj = org.json.JSONObject()
@@ -835,10 +840,68 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
         }
         root.put("payments", paymentsArray)
 
+        // Group 2 Students
+        val students2Array = org.json.JSONArray()
+        students2.value.forEach {
+            val obj = org.json.JSONObject()
+            obj.put("id", it.id)
+            obj.put("fullName", it.fullName)
+            obj.put("lastModified", it.lastModified)
+            students2Array.put(obj)
+        }
+        root.put("students2", students2Array)
+
+        // Group 2 Month Headers
+        val monthHeaders2Array = org.json.JSONArray()
+        monthHeaders2.value.forEach {
+            val obj = org.json.JSONObject()
+            obj.put("monthIndex", it.monthIndex)
+            obj.put("name", it.name)
+            monthHeaders2Array.put(obj)
+        }
+        root.put("month_headers2", monthHeaders2Array)
+
+        // Group 2 Payments
+        val payments2Array = org.json.JSONArray()
+        payments2.value.forEach {
+            val obj = org.json.JSONObject()
+            obj.put("studentId", it.studentId)
+            obj.put("monthIndex", it.monthIndex)
+            obj.put("paid", it.paid)
+            payments2Array.put(obj)
+        }
+        root.put("payments2", payments2Array)
+
+        // App Configurations (excluding password)
+        val configsArray = org.json.JSONArray()
+        
+        val enabledObj = org.json.JSONObject()
+        enabledObj.put("key", "alarm_enabled")
+        enabledObj.put("value", alarmEnabled.toString())
+        configsArray.put(enabledObj)
+
+        val ringtoneObj = org.json.JSONObject()
+        ringtoneObj.put("key", "alarm_ringtone_uri")
+        ringtoneObj.put("value", alarmRingtoneUri ?: "")
+        configsArray.put(ringtoneObj)
+
+        alarmTimes.forEach { (h, time) ->
+            val timeObj = org.json.JSONObject()
+            timeObj.put("key", "alarm_time_$h")
+            timeObj.put("value", time)
+            configsArray.put(timeObj)
+        }
+        root.put("configs", configsArray)
+
         return root.toString(2)
     }
 
-    fun importBackupJsonString(jsonString: String, onSuccess: () -> Unit, onFailure: (String) -> Unit) {
+    fun importBackupJsonString(
+        context: android.content.Context,
+        jsonString: String,
+        onSuccess: () -> Unit,
+        onFailure: (String) -> Unit
+    ) {
         viewModelScope.launch {
             try {
                 val root = org.json.JSONObject(jsonString)
@@ -916,16 +979,137 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
 
+                val students2List = mutableListOf<Student2Entity>()
+                if (root.has("students2")) {
+                    val arr = root.getJSONArray("students2")
+                    for (i in 0 until arr.length()) {
+                        val obj = arr.getJSONObject(i)
+                        students2List.add(
+                            Student2Entity(
+                                id = obj.getInt("id"),
+                                fullName = obj.getString("fullName"),
+                                lastModified = obj.optLong("lastModified", System.currentTimeMillis())
+                            )
+                        )
+                    }
+                }
+
+                val monthHeaders2List = mutableListOf<MonthHeader2Entity>()
+                if (root.has("month_headers2")) {
+                    val arr = root.getJSONArray("month_headers2")
+                    for (i in 0 until arr.length()) {
+                        val obj = arr.getJSONObject(i)
+                        monthHeaders2List.add(
+                            MonthHeader2Entity(
+                                monthIndex = obj.getInt("monthIndex"),
+                                name = obj.getString("name")
+                            )
+                        )
+                    }
+                }
+
+                val payments2List = mutableListOf<Payment2Entity>()
+                if (root.has("payments2")) {
+                    val arr = root.getJSONArray("payments2")
+                    for (i in 0 until arr.length()) {
+                        val obj = arr.getJSONObject(i)
+                        payments2List.add(
+                            Payment2Entity(
+                                studentId = obj.getInt("studentId"),
+                                monthIndex = obj.getInt("monthIndex"),
+                                paid = obj.getBoolean("paid")
+                            )
+                        )
+                    }
+                }
+
+                val configsList = mutableListOf<ConfigEntity>()
+                if (root.has("configs")) {
+                    val arr = root.getJSONArray("configs")
+                    for (i in 0 until arr.length()) {
+                        val obj = arr.getJSONObject(i)
+                        val key = obj.getString("key")
+                        if (key != "password") {
+                            configsList.add(
+                                ConfigEntity(
+                                    key = key,
+                                    value = obj.getString("value")
+                                )
+                            )
+                        }
+                    }
+                }
+
                 repository.importBackup(
                     studentsList,
                     hourHeadersList,
                     appointmentCellsList,
                     monthHeadersList,
-                    paymentsList
+                    paymentsList,
+                    students2List,
+                    monthHeaders2List,
+                    payments2List,
+                    configsList
                 )
 
-                // Resync drafts so the UI updates immediately
-                syncDraftsFromDb()
+                // Update configuration state in ViewModel from imported configs
+                configsList.forEach { config ->
+                    when (config.key) {
+                        "alarm_enabled" -> {
+                            alarmEnabled = config.value.toBoolean()
+                            draftAlarmEnabled = alarmEnabled
+                        }
+                        "alarm_ringtone_uri" -> {
+                            alarmRingtoneUri = if (config.value.isEmpty()) null else config.value
+                            draftAlarmRingtoneUri = alarmRingtoneUri
+                        }
+                        else -> {
+                            if (config.key.startsWith("alarm_time_")) {
+                                try {
+                                    val idx = config.key.substringAfter("alarm_time_").toInt()
+                                    val updatedMap = alarmTimes.toMutableMap()
+                                    updatedMap[idx] = config.value
+                                    alarmTimes = updatedMap
+                                    draftAlarmTimes = updatedMap
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Reschedule alarms immediately with newly imported settings
+                try {
+                    AlarmScheduler.scheduleAlarms(
+                        context,
+                        alarmEnabled,
+                        alarmTimes,
+                        alarmRingtoneUri ?: "",
+                        appointmentCellsList.ifEmpty { appointmentCells.value }
+                    )
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+
+                // Set draft states directly to update UI instantly and avoid delays
+                draftStudents = studentsList
+                draftStudents2 = students2List
+                deletedStudentIds = emptySet()
+                deletedStudentIds2 = emptySet()
+
+                draftMonthHeaders = monthHeadersList.associate { it.monthIndex to it.name }
+                draftMonthHeaders2 = monthHeaders2List.associate { it.monthIndex to it.name }
+
+                draftPayments = paymentsList.associate { (it.studentId to it.monthIndex) to it.paid }
+                draftPayments2 = payments2List.associate { (it.studentId to it.monthIndex) to it.paid }
+
+                draftHourHeaders = hourHeadersList.associate { it.hourIndex to it.name }
+                draftCells = appointmentCellsList.associate { (it.dayIndex to it.hourIndex) to it.content }
+
+                isStudentsLoaded = true
+                isStudents2Loaded = true
+
                 _uiEvent.emit("تم استيراد البيانات بنجاح!")
                 onSuccess()
             } catch (e: Exception) {
@@ -991,12 +1175,16 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val correctPassword = repository.getPassword()
             if (passwordEntering == correctPassword) {
-                val positiveIds = draftStudents.filter { it.id > 0 }.map { it.id }
-                deletedStudentIds = deletedStudentIds + positiveIds
-                draftStudents = emptyList()
-                draftPayments = emptyMap()
-                saveNamesAndPayments()
-                onSuccess()
+                try {
+                    repository.deleteAllStudentsAndPayments1()
+                    draftStudents = emptyList()
+                    draftPayments = emptyMap()
+                    deletedStudentIds = emptySet()
+                    isStudentsLoaded = true
+                    onSuccess()
+                } catch (e: Exception) {
+                    onFailure("حدث خطأ أثناء مسح البيانات: ${e.localizedMessage}")
+                }
             } else {
                 onFailure("كلمة السر غير صحيحة، يرجى المحاولة مرة أخرى")
             }
@@ -1014,12 +1202,16 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val correctPassword = repository.getPassword()
             if (passwordEntering == correctPassword) {
-                val positiveIds = draftStudents2.filter { it.id > 0 }.map { it.id }
-                deletedStudentIds2 = deletedStudentIds2 + positiveIds
-                draftStudents2 = emptyList()
-                draftPayments2 = emptyMap()
-                saveNamesAndPayments2()
-                onSuccess()
+                try {
+                    repository.deleteAllStudentsAndPayments2()
+                    draftStudents2 = emptyList()
+                    draftPayments2 = emptyMap()
+                    deletedStudentIds2 = emptySet()
+                    isStudents2Loaded = true
+                    onSuccess()
+                } catch (e: Exception) {
+                    onFailure("حدث خطأ أثناء مسح البيانات: ${e.localizedMessage}")
+                }
             } else {
                 onFailure("كلمة السر غير صحيحة، يرجى المحاولة مرة أخرى")
             }

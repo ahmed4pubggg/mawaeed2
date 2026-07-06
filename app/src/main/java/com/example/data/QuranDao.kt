@@ -13,6 +13,9 @@ interface QuranDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun saveConfig(config: ConfigEntity)
 
+    @Query("SELECT * FROM configs")
+    suspend fun getAllConfigs(): List<ConfigEntity>
+
     // Hour Headers
     @Query("SELECT * FROM hour_headers ORDER BY hourIndex ASC")
     fun getHourHeaders(): Flow<List<HourHeaderEntity>>
