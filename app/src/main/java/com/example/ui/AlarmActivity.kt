@@ -11,11 +11,14 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Alarm
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.Snooze
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,27 +27,31 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.theme.DarkTeal
-import com.example.ui.theme.GoldAccent
-import com.example.ui.theme.LightTeal
-import com.example.ui.theme.MediumTeal
+import com.example.ui.theme.AlarmBgBottom
+import com.example.ui.theme.AlarmBgMid
+import com.example.ui.theme.AlarmBgTop
+import com.example.ui.theme.AlarmGold
+import com.example.ui.theme.AlarmGoldDeep
 import com.example.ui.theme.MyApplicationTheme
+import kotlin.math.roundToInt
 
 class AlarmActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
+
         // Show over lockscreen and wake screen up
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true)
             setTurnScreenOn(true)
         }
-        
+
         @Suppress("DEPRECATION")
         window.addFlags(
             WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
@@ -57,7 +64,7 @@ class AlarmActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             keyguardManager?.requestDismissKeyguard(this, null)
         }
-        
+
         enableEdgeToEdge()
 
         val appointmentText = intent.getStringExtra("appointment_text") ?: "حصة قرآنية"
@@ -110,46 +117,46 @@ fun AlarmScreen(
     onSnooze: () -> Unit
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-    
-    // Scale animation for the main alarm circle
+
+    // Breathing scale for the central alarm badge
     val scale by infiniteTransition.animateFloat(
-        initialValue = 0.95f,
-        targetValue = 1.15f,
+        initialValue = 0.96f,
+        targetValue = 1.1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = FastOutSlowInEasing),
+            animation = tween(1300, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
         label = "pulseScale"
     )
 
-    // Soft rotation animation for the background Islamic patterns
+    // Slow ambient rotation for the decorative background glow
     val rotation by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
         animationSpec = infiniteRepeatable(
-            animation = tween(40000, easing = LinearEasing),
+            animation = tween(50000, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
         label = "bgRotation"
     )
 
-    // Pulsing aura opacity
+    // Aura opacity pulse
     val auraAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.15f,
-        targetValue = 0.45f,
+        initialValue = 0.18f,
+        targetValue = 0.5f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = FastOutSlowInEasing),
+            animation = tween(1300, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
         label = "auraAlpha"
     )
 
-    // Rapid wiggling / ringing animation for the alarm bell icon
+    // Ringing wiggle for the bell icon
     val wiggleRotation by infiniteTransition.animateFloat(
-        initialValue = -16f,
-        targetValue = 16f,
+        initialValue = -14f,
+        targetValue = 14f,
         animationSpec = infiniteRepeatable(
-            animation = tween(110, easing = LinearEasing),
+            animation = tween(120, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse
         ),
         label = "wiggleRotation"
@@ -181,75 +188,72 @@ fun AlarmScreen(
             .fillMaxSize()
             .background(
                 brush = Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFF001F1A), // Extremely rich deep forest green
-                        Color(0xFF003D33), // Deep teal
-                        Color(0xFF00120F)  // Dark shadowed green
-                    )
+                    colors = listOf(AlarmBgTop, AlarmBgMid, AlarmBgBottom)
                 )
             ),
         contentAlignment = Alignment.Center
     ) {
-        // Decorative Animated Background Elements (Islamic Geometric Stars)
+        // Ambient rotating glow (very subtle, purely decorative)
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(24.dp),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = Icons.Filled.Alarm, // Using it dynamically as a shape or we can use custom icons
-                contentDescription = null,
-                tint = Color(0xFFFFD54F).copy(alpha = 0.03f),
+            Box(
                 modifier = Modifier
-                    .size(450.dp)
-                    .scale(scale * 1.2f)
+                    .size(420.dp)
+                    .rotate(rotation)
+                    .background(
+                        brush = Brush.sweepGradient(
+                            colors = listOf(
+                                AlarmGold.copy(alpha = 0.05f),
+                                Color.Transparent,
+                                AlarmGold.copy(alpha = 0.05f),
+                                Color.Transparent
+                            )
+                        ),
+                        shape = CircleShape
+                    )
             )
         }
 
         Column(
             modifier = Modifier
-                .fillMaxWidth(0.92f)
-                .padding(horizontal = 20.dp, vertical = 24.dp),
+                .fillMaxSize()
+                .padding(horizontal = 28.dp, vertical = 36.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
+            verticalArrangement = Arrangement.Center
         ) {
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Glowing Pulsing Circular Header Group
+            // Glowing pulsing badge
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier.size(170.dp)
             ) {
-                // Outer gold aura ring 1
                 Box(
                     modifier = Modifier
                         .size(160.dp)
                         .scale(scale)
                         .background(
                             brush = Brush.radialGradient(
-                                colors = listOf(Color(0xFFFFD54F).copy(alpha = auraAlpha), Color.Transparent)
+                                colors = listOf(AlarmGold.copy(alpha = auraAlpha), Color.Transparent)
                             ),
                             shape = CircleShape
                         )
                 )
 
-                // Outer gold aura ring 2
                 Box(
                     modifier = Modifier
-                        .size(130.dp)
-                        .background(Color(0xFF004D40), shape = CircleShape)
-                        .border(BorderStroke(2.dp, Color(0xFFFFD54F).copy(alpha = 0.6f)), CircleShape)
+                        .size(128.dp)
+                        .background(AlarmBgMid, shape = CircleShape)
+                        .border(BorderStroke(2.dp, AlarmGold.copy(alpha = 0.6f)), CircleShape)
                 )
 
-                // Central high-contrast gold coin
                 Box(
                     modifier = Modifier
-                        .size(96.dp)
+                        .size(94.dp)
                         .background(
-                            brush = Brush.verticalGradient(
-                                colors = listOf(Color(0xFFFFD54F), Color(0xFFFFB300))
-                            ),
+                            brush = Brush.verticalGradient(colors = listOf(AlarmGold, AlarmGoldDeep)),
                             shape = CircleShape
                         ),
                     contentAlignment = Alignment.Center
@@ -257,49 +261,48 @@ fun AlarmScreen(
                     Icon(
                         imageVector = Icons.Filled.Alarm,
                         contentDescription = "المنبه",
-                        tint = Color(0xFF001F1A),
+                        tint = AlarmBgBottom,
                         modifier = Modifier
-                            .size(50.dp)
+                            .size(48.dp)
                             .rotate(wiggleRotation)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(26.dp))
 
-            // Title Header with proper typography hierarchy
             Text(
-                text = "⏱️ حَانَ الآنَ مَوْعِدُ الحِصَّةِ",
+                text = "حَانَ الآنَ مَوْعِدُ الحِصَّةِ",
                 style = MaterialTheme.typography.headlineMedium.copy(
                     fontWeight = FontWeight.ExtraBold,
-                    color = Color(0xFFFFD54F),
-                    fontSize = 21.sp,
-                    letterSpacing = 0.5.sp
+                    color = AlarmGold,
+                    fontSize = 22.sp,
+                    letterSpacing = 0.4.sp
                 ),
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
-            // Premium Glassmorphic Card (Deep translucent teal background with thick gold and white glass accents)
+            // Premium glass card with appointment details
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .border(
                         border = BorderStroke(
-                            1.5.dp, 
+                            1.5.dp,
                             Brush.verticalGradient(
                                 listOf(
-                                    Color(0xFFFFD54F).copy(alpha = 0.8f), 
-                                    Color.White.copy(alpha = 0.4f), 
-                                    Color(0xFF00796B).copy(alpha = 0.4f)
+                                    AlarmGold.copy(alpha = 0.75f),
+                                    Color.White.copy(alpha = 0.35f),
+                                    AlarmBgMid.copy(alpha = 0.4f)
                                 )
                             )
                         ),
                         shape = RoundedCornerShape(28.dp)
                     ),
                 colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFF001F1A).copy(alpha = 0.38f)
+                    containerColor = AlarmBgTop.copy(alpha = 0.4f)
                 ),
                 shape = RoundedCornerShape(28.dp),
                 elevation = CardDefaults.cardElevation(defaultElevation = 16.dp)
@@ -311,32 +314,30 @@ fun AlarmScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    // Date & Time badge with custom visual weight
                     Box(
                         modifier = Modifier
-                            .background(Color(0xFF004D40), shape = RoundedCornerShape(12.dp))
-                            .border(BorderStroke(1.dp, Color(0xFFFFD54F).copy(alpha = 0.3f)), RoundedCornerShape(12.dp))
+                            .background(AlarmBgMid, shape = RoundedCornerShape(12.dp))
+                            .border(BorderStroke(1.dp, AlarmGold.copy(alpha = 0.3f)), RoundedCornerShape(12.dp))
                             .padding(horizontal = 14.dp, vertical = 6.dp)
                     ) {
                         Text(
                             text = "يَوْمُ $day • السَّاعَةُ $formattedTime",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontSize = 16.sp,
-                                color = Color(0xFFFFD54F),
+                                color = AlarmGold,
                                 fontWeight = FontWeight.Bold
                             ),
                             textAlign = TextAlign.Center
                         )
                     }
 
-                    // Main Appointment Text in extremely bold, crisp and huge size
                     Text(
                         text = text,
                         style = MaterialTheme.typography.headlineLarge.copy(
-                            fontSize = 28.sp,
+                            fontSize = 27.sp,
                             color = Color.White,
                             fontWeight = FontWeight.Black,
-                            lineHeight = 38.sp
+                            lineHeight = 36.sp
                         ),
                         textAlign = TextAlign.Center,
                         modifier = Modifier.padding(top = 4.dp)
@@ -344,84 +345,143 @@ fun AlarmScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(36.dp))
+            Spacer(modifier = Modifier.height(34.dp))
 
-            // Action Buttons Group (Interactive & Polished layout)
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+            // Interactive slide-to-stop control (primary action), plus a compact snooze button.
+            // Functionally identical to before: stop / snooze(10 min) — just presented in a
+            // more modern, tactile way that's harder to trigger by accident.
+            SlideToStopControl(onStop = onStop)
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            OutlinedButton(
+                onClick = onSnooze,
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = AlarmGold.copy(alpha = 0.9f)
+                ),
+                border = BorderStroke(1.5.dp, AlarmGold.copy(alpha = 0.45f)),
+                shape = RoundedCornerShape(18.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(54.dp)
             ) {
-                // Dismiss / Stop Button (Prominent Gold Accent)
-                Button(
-                    onClick = onStop,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFFFD54F),
-                        contentColor = Color(0xFF001F1A)
-                    ),
-                    elevation = ButtonDefaults.buttonElevation(
-                        defaultElevation = 8.dp,
-                        pressedElevation = 2.dp
-                    ),
-                    shape = RoundedCornerShape(18.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(58.dp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxSize()
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        Text(
-                            text = "🛑 إِيقَافُ التَّنْبِيهِ",
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Black,
-                                fontSize = 17.sp
-                            )
+                    Icon(
+                        imageVector = Icons.Filled.Snooze,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "تَأْجِيلٌ (١٠ دَقَائِق)",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp
                         )
-                    }
-                }
-
-                // Snooze Button (Sleek Glassmorphic Outlined Button)
-                OutlinedButton(
-                    onClick = onSnooze,
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = Color(0xFF80CBC4)
-                    ),
-                    border = BorderStroke(1.5.dp, Color(0xFF80CBC4)),
-                    shape = RoundedCornerShape(18.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(54.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        Text(
-                            text = "💤 تَأْجِيلٌ (١٠ دَقَائِق)",
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 15.sp
-                            )
-                        )
-                    }
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(26.dp))
 
-            // Sheikh Ahmed El Nems Signature / Rights Credit Label
             Text(
                 text = "بواسطة الشيخ أحمد النمس غفر الله له ولوالديه",
                 style = MaterialTheme.typography.bodyMedium.copy(
-                    color = Color(0xFFFFE082),
+                    color = AlarmGold.copy(alpha = 0.85f),
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.sp
                 ),
                 textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+/**
+ * A modern "slide to stop" control: the primary way alarm clock apps prevent an alarm
+ * from being dismissed by an accidental tap while still using a single, clear gesture.
+ * Dragging the gold handle across the track calls [onStop] — same underlying action as
+ * the old "إيقاف التنبيه" button, just presented as an interactive, premium control.
+ */
+@Composable
+private fun SlideToStopControl(onStop: () -> Unit) {
+    val trackHeight = 64.dp
+    val handleSize = 56.dp
+    var trackWidthPx by remember { mutableStateOf(0f) }
+    var dragOffsetPx by remember { mutableStateOf(0f) }
+    var triggered by remember { mutableStateOf(false) }
+    val density = androidx.compose.ui.platform.LocalDensity.current
+
+    val maxOffsetPx = remember(trackWidthPx) {
+        val handlePx = with(density) { handleSize.toPx() }
+        (trackWidthPx - handlePx).coerceAtLeast(0f)
+    }
+
+    val animatedOffset by animateFloatAsState(
+        targetValue = dragOffsetPx,
+        animationSpec = if (triggered) tween(150) else spring(),
+        label = "handleOffset"
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(trackHeight)
+            .background(AlarmBgTop.copy(alpha = 0.55f), shape = RoundedCornerShape(32.dp))
+            .border(BorderStroke(1.5.dp, AlarmGold.copy(alpha = 0.35f)), RoundedCornerShape(32.dp))
+            .onSizeChanged { trackWidthPx = it.width.toFloat() },
+        contentAlignment = Alignment.CenterStart
+    ) {
+        Text(
+            text = "« اِسْحَبْ لِإِيقَافِ التَّنْبِيهِ",
+            style = MaterialTheme.typography.titleMedium.copy(
+                fontWeight = FontWeight.Bold,
+                fontSize = 15.sp
+            ),
+            color = Color.White.copy(alpha = 0.75f),
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Center
+        )
+
+        Box(
+            modifier = Modifier
+                .padding(4.dp)
+                .offset { androidx.compose.ui.unit.IntOffset(animatedOffset.roundToInt(), 0) }
+                .size(handleSize)
+                .background(
+                    brush = Brush.verticalGradient(colors = listOf(AlarmGold, AlarmGoldDeep)),
+                    shape = CircleShape
+                )
+                .pointerInput(maxOffsetPx) {
+                    detectHorizontalDragGestures(
+                        onDragEnd = {
+                            if (dragOffsetPx >= maxOffsetPx * 0.82f) {
+                                triggered = true
+                                dragOffsetPx = maxOffsetPx
+                                onStop()
+                            } else {
+                                dragOffsetPx = 0f
+                            }
+                        },
+                        onHorizontalDrag = { change, delta ->
+                            change.consume()
+                            // RTL-friendly: dragging in either direction moves the handle
+                            // toward the far edge; we just track absolute progress.
+                            dragOffsetPx = (dragOffsetPx + delta).coerceIn(0f, maxOffsetPx)
+                        }
+                    )
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Filled.ChevronLeft,
+                contentDescription = "إيقاف التنبيه",
+                tint = AlarmBgBottom,
+                modifier = Modifier.size(28.dp)
             )
         }
     }

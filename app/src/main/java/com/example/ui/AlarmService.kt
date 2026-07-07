@@ -134,9 +134,30 @@ class AlarmService : Service() {
         // Start ringing and vibrating
         startRinging(ringtoneUri)
 
-        // Auto-launch Full Screen Activity over Lockscreen
+        // IMPORTANT FIX: Do NOT call startActivity() unconditionally from here.
+        // On Android 10+ (API 29+), starting an Activity directly from a background
+        // Service is blocked by the system's "background activity launch" restrictions.
+        // When that happens silently, the ONLY thing the user sees is the notification
+        // sitting behind/under the lock screen instead of the full alarm screen.
+        //
+        // The correct, system-blessed way to show a full-screen UI over the lock screen
+        // is the setFullScreenIntent() attached to the notification above — Android itself
+        // launches that PendingIntent when the device is locked or the screen is off.
+        //
+        // We only fall back to a manual startActivity() when the device is ALREADY
+        // unlocked and awake, because in that case the full-screen intent is NOT
+        // auto-launched by the system (by design, so it doesn't hijack whatever the
+        // user is doing) and a normal foreground-service-triggered launch is allowed
+        // right after startForeground().
         try {
-            startActivity(activityIntent)
+            val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as? android.app.KeyguardManager
+            val isLocked = keyguardManager?.isKeyguardLocked ?: false
+            val powerManager = getSystemService(Context.POWER_SERVICE) as? PowerManager
+            val isScreenOn = powerManager?.isInteractive ?: true
+
+            if (!isLocked && isScreenOn) {
+                startActivity(activityIntent)
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
