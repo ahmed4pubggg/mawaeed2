@@ -29,8 +29,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.AlarmBgBottom
@@ -427,62 +429,64 @@ private fun SlideToStopControl(onStop: () -> Unit) {
         label = "handleOffset"
     )
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(trackHeight)
-            .background(AlarmBgTop.copy(alpha = 0.55f), shape = RoundedCornerShape(32.dp))
-            .border(BorderStroke(1.5.dp, AlarmGold.copy(alpha = 0.35f)), RoundedCornerShape(32.dp))
-            .onSizeChanged { trackWidthPx = it.width.toFloat() },
-        contentAlignment = Alignment.CenterStart
-    ) {
-        Text(
-            text = "« اِسْحَبْ لِإِيقَافِ التَّنْبِيهِ",
-            style = MaterialTheme.typography.titleMedium.copy(
-                fontWeight = FontWeight.Bold,
-                fontSize = 15.sp
-            ),
-            color = Color.White.copy(alpha = 0.75f),
-            modifier = Modifier.fillMaxWidth(),
-            textAlign = TextAlign.Center
-        )
-
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         Box(
             modifier = Modifier
-                .padding(4.dp)
-                .offset { androidx.compose.ui.unit.IntOffset(animatedOffset.roundToInt(), 0) }
-                .size(handleSize)
-                .background(
-                    brush = Brush.verticalGradient(colors = listOf(AlarmGold, AlarmGoldDeep)),
-                    shape = CircleShape
-                )
-                .pointerInput(maxOffsetPx) {
-                    detectHorizontalDragGestures(
-                        onDragEnd = {
-                            if (dragOffsetPx >= maxOffsetPx * 0.82f) {
-                                triggered = true
-                                dragOffsetPx = maxOffsetPx
-                                onStop()
-                            } else {
-                                dragOffsetPx = 0f
-                            }
-                        },
-                        onHorizontalDrag = { change, delta ->
-                            change.consume()
-                            // RTL-friendly: dragging in either direction moves the handle
-                            // toward the far edge; we just track absolute progress.
-                            dragOffsetPx = (dragOffsetPx + delta).coerceIn(0f, maxOffsetPx)
-                        }
-                    )
-                },
-            contentAlignment = Alignment.Center
+                .fillMaxWidth()
+                .height(trackHeight)
+                .background(AlarmBgTop.copy(alpha = 0.55f), shape = RoundedCornerShape(32.dp))
+                .border(BorderStroke(1.5.dp, AlarmGold.copy(alpha = 0.35f)), RoundedCornerShape(32.dp))
+                .onSizeChanged { trackWidthPx = it.width.toFloat() },
+            contentAlignment = Alignment.CenterStart
         ) {
-            Icon(
-                imageVector = Icons.Filled.ChevronLeft,
-                contentDescription = "إيقاف التنبيه",
-                tint = AlarmBgBottom,
-                modifier = Modifier.size(28.dp)
+            Text(
+                text = "اِسْحَبْ لِإِيقَافِ التَّنْبِيهِ »",
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp
+                ),
+                color = Color.White.copy(alpha = 0.75f),
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center
             )
+
+            Box(
+                modifier = Modifier
+                    .padding(4.dp)
+                    .offset { androidx.compose.ui.unit.IntOffset(animatedOffset.roundToInt(), 0) }
+                    .size(handleSize)
+                    .background(
+                        brush = Brush.verticalGradient(colors = listOf(AlarmGold, AlarmGoldDeep)),
+                        shape = CircleShape
+                    )
+                    .pointerInput(maxOffsetPx) {
+                        detectHorizontalDragGestures(
+                            onDragEnd = {
+                                if (dragOffsetPx >= maxOffsetPx * 0.82f) {
+                                    triggered = true
+                                    dragOffsetPx = maxOffsetPx
+                                    onStop()
+                                } else {
+                                    dragOffsetPx = 0f
+                                }
+                            },
+                            onHorizontalDrag = { change, delta ->
+                                change.consume()
+                                dragOffsetPx = (dragOffsetPx + delta).coerceIn(0f, maxOffsetPx)
+                            }
+                        )
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.ChevronLeft,
+                    contentDescription = "إيقاف التنبيه",
+                    tint = AlarmBgBottom,
+                    modifier = Modifier
+                        .size(28.dp)
+                        .rotate(180f)
+                )
+            }
         }
     }
 }
