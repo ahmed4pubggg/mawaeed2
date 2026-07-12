@@ -24,6 +24,8 @@ class AlarmService : Service() {
     private var mediaPlayer: MediaPlayer? = null
     private var vibrator: Vibrator? = null
     private var wakeLock: PowerManager.WakeLock? = null
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var stopRunnable: Runnable? = null
 
     companion object {
         var activeService: AlarmService? = null
@@ -134,30 +136,24 @@ class AlarmService : Service() {
         // Start ringing and vibrating
         startRinging(ringtoneUri)
 
-        // IMPORTANT FIX: Do NOT call startActivity() unconditionally from here.
-        // On Android 10+ (API 29+), starting an Activity directly from a background
-        // Service is blocked by the system's "background activity launch" restrictions.
-        // When that happens silently, the ONLY thing the user sees is the notification
-        // sitting behind/under the lock screen instead of the full alarm screen.
-        //
-        // The correct, system-blessed way to show a full-screen UI over the lock screen
-        // is the setFullScreenIntent() attached to the notification above — Android itself
-        // launches that PendingIntent when the device is locked or the screen is off.
-        //
-        // We only fall back to a manual startActivity() when the device is ALREADY
-        // unlocked and awake, because in that case the full-screen intent is NOT
-        // auto-launched by the system (by design, so it doesn't hijack whatever the
-        // user is doing) and a normal foreground-service-triggered launch is allowed
-        // right after startForeground().
-        try {
-            val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as? android.app.KeyguardManager
-            val isLocked = keyguardManager?.isKeyguardLocked ?: false
-            val powerManager = getSystemService(Context.POWER_SERVICE) as? PowerManager
-            val isScreenOn = powerManager?.isInteractive ?: true
+        // Schedule 3-minute auto-timeout to preserve battery and alert user with a missed notification
+        stopRunnable?.let { handler.removeCallbacks(it) }
+        val currentText = appointmentText
+        val currentDay = appointmentDay
+        val currentTime = appointmentTime
+        stopRunnable = Runnable {
+            showMissedNotification(currentText, currentDay, currentTime)
+            AlarmActivity.activeActivity?.finish()
+            stopAlarmService()
+        }
+        handler.postDelayed(stopRunnable!!, 3 * 60 * 1000L) // 3 minutes
 
-            if (!isLocked && isScreenOn) {
-                startActivity(activityIntent)
-            }
+        // Modern Android alarm systems: Attempt to start the activity directly so that
+        // if the device lock screen is active but interactive, the activity displays immediately.
+        // If it's blocked by background restrictions on some OS versions, the setFullScreenIntent()
+        // in the notification will still serve as the reliable system-blessed backup.
+        try {
+            startActivity(activityIntent)
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -232,6 +228,46 @@ class AlarmService : Service() {
         stopSelf()
     }
 
+    private fun showMissedNotification(text: String, day: String, time: String) {
+        val channelId = "missed_appointments_channel"
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                channelId,
+                "المنبهات الفائتة",
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = "إشعارات المنبهات التي لم يتم الرد عليها"
+                enableLights(true)
+                lightColor = Color.YELLOW
+            }
+            notificationManager.createNotificationChannel(channel)
+        }
+
+        // Open main app when clicking the missed notification
+        val mainIntent = Intent(this, com.example.MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            2001,
+            mainIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(this, channelId)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle("منبه فائت ⚠️")
+            .setContentText("لم يتم الرد على منبه حصة: $text ($day - $time)")
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+            .build()
+
+        notificationManager.notify(998, notification)
+    }
+
     fun snoozeAlarmService(context: Context, appointmentText: String, appointmentDay: String, appointmentTime: String, ringtoneUri: String) {
         // Schedule snooze alarm 10 minutes from now
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
@@ -280,6 +316,7 @@ class AlarmService : Service() {
 
     override fun onDestroy() {
         activeService = null
+        stopRunnable?.let { handler.removeCallbacks(it) }
         try {
             mediaPlayer?.stop()
             mediaPlayer?.release()

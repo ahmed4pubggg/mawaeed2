@@ -45,8 +45,13 @@ import kotlin.math.roundToInt
 
 class AlarmActivity : ComponentActivity() {
 
+    companion object {
+        var activeActivity: AlarmActivity? = null
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        activeActivity = this
 
         // Show over lockscreen and wake screen up
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
@@ -100,6 +105,9 @@ class AlarmActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        if (activeActivity == this) {
+            activeActivity = null
+        }
         super.onDestroy()
     }
 
@@ -429,6 +437,9 @@ private fun SlideToStopControl(onStop: () -> Unit) {
         label = "handleOffset"
     )
 
+    val dragProgress = if (maxOffsetPx > 0f) (animatedOffset / maxOffsetPx) else 0f
+    val fillWidthDp = with(density) { (animatedOffset + (handleSize.toPx() / 2)).toDp() }
+
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         Box(
             modifier = Modifier
@@ -439,6 +450,22 @@ private fun SlideToStopControl(onStop: () -> Unit) {
                 .onSizeChanged { trackWidthPx = it.width.toFloat() },
             contentAlignment = Alignment.CenterStart
         ) {
+            // Dynamic color/gradient behind the dragged button
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(fillWidthDp)
+                    .background(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(
+                                AlarmGold.copy(alpha = 0.12f),
+                                AlarmGoldDeep.copy(alpha = 0.55f * dragProgress)
+                            )
+                        ),
+                        shape = RoundedCornerShape(32.dp)
+                    )
+            )
+
             Text(
                 text = "اِسْحَبْ لِإِيقَافِ التَّنْبِيهِ »",
                 style = MaterialTheme.typography.titleMedium.copy(
