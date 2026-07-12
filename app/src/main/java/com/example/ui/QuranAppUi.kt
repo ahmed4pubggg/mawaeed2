@@ -166,6 +166,8 @@ fun LoginScreen(viewModel: QuranViewModel) {
         Column(
             modifier = Modifier
                 .fillMaxWidth(if (isLandscape) 0.5f else 0.9f)
+                .safeDrawingPadding()
+                .padding(16.dp)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -388,7 +390,7 @@ fun MainAppScreen(viewModel: QuranViewModel) {
     val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     if (isLandscape) {
-        Row(modifier = Modifier.fillMaxSize()) {
+        Row(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
             NavigationRail(
                 containerColor = MaterialTheme.colorScheme.surface,
                 header = {
@@ -476,113 +478,113 @@ fun MainAppScreen(viewModel: QuranViewModel) {
             }
         }
     } else {
-        Column(modifier = Modifier.fillMaxSize()) {
-            // App Header - Centered to avoid any empty spaces or offset alignment
-            CenterAlignedTopAppBar(
-                title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.app_logo),
-                            contentDescription = "شعار",
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "برنامج المواعيد",
-                            style = MaterialTheme.typography.titleLarge.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onPrimaryContainer else Color.White
+        Scaffold(
+            topBar = {
+                CenterAlignedTopAppBar(
+                    title = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.app_logo),
+                                contentDescription = "شعار",
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
                             )
-                        )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "برنامج المواعيد",
+                                style = MaterialTheme.typography.titleLarge.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onPrimaryContainer else Color.White
+                                )
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primaryContainer else DarkTeal
+                    ),
+                    actions = {
+                        IconButton(onClick = { showLogoutDialog = true }) {
+                            Icon(
+                                imageVector = Icons.Filled.Logout,
+                                contentDescription = "خروج",
+                                tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onPrimaryContainer else Color.White
+                            )
+                        }
                     }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primaryContainer else DarkTeal
-                ),
-                actions = {
-                    IconButton(onClick = { showLogoutDialog = true }) {
-                        Icon(
-                            imageVector = Icons.Filled.Logout,
-                            contentDescription = "خروج",
-                            tint = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onPrimaryContainer else Color.White
-                        )
+                )
+            },
+            bottomBar = {
+                Surface(
+                    color = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 8.dp
+                ) {
+                    Column {
+                        // Mini Credit Bar
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surfaceVariant else LightTeal.copy(alpha = 0.4f))
+                                .padding(vertical = 6.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "بواسطة الشيخ أحمد النمس غفر الله له",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            )
+                        }
+
+                        NavigationBar(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            tonalElevation = 0.dp
+                        ) {
+                            tabs.forEachIndexed { index, (label, icon) ->
+                                NavigationBarItem(
+                                    selected = selectedTab == index,
+                                    onClick = { selectedTab = index },
+                                    icon = {
+                                        Icon(
+                                            imageVector = icon,
+                                            contentDescription = label
+                                        )
+                                    },
+                                    label = {
+                                        Text(
+                                            text = label,
+                                            fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
+                                            fontSize = 11.sp
+                                        )
+                                    },
+                                    colors = NavigationBarItemDefaults.colors(
+                                        selectedIconColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                                        selectedTextColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
+                                        indicatorColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primaryContainer else LightTeal,
+                                        unselectedIconColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f) else MediumTeal.copy(alpha = 0.7f),
+                                        unselectedTextColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f) else MediumTeal.copy(alpha = 0.7f)
+                                    )
+                                )
+                            }
+                        }
                     }
                 }
-            )
-
-            // Contents Based on Selection
+            }
+        ) { innerPadding ->
             Box(
                 modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
+                    .fillMaxSize()
+                    .padding(innerPadding)
             ) {
                 when (selectedTab) {
                     0 -> AppointmentsTab(viewModel = viewModel)
                     1 -> StudentsTab(viewModel = viewModel, isGroup2 = false)
                     2 -> StudentsTab(viewModel = viewModel, isGroup2 = true)
                     3 -> PasswordTab(viewModel = viewModel)
-                }
-            }
-
-            // Dedicated Bottom Copyright Credit & App Bar
-            Surface(
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 8.dp
-            ) {
-                Column {
-                    // Mini Credit Bar
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surfaceVariant else LightTeal.copy(alpha = 0.4f))
-                            .padding(vertical = 6.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "بواسطة الشيخ أحمد النمس غفر الله له",
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
-                                fontWeight = FontWeight.Bold
-                            )
-                        )
-                    }
-
-                    NavigationBar(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        tonalElevation = 0.dp
-                    ) {
-                        tabs.forEachIndexed { index, (label, icon) ->
-                            NavigationBarItem(
-                                selected = selectedTab == index,
-                                onClick = { selectedTab = index },
-                                icon = {
-                                    Icon(
-                                        imageVector = icon,
-                                        contentDescription = label
-                                    )
-                                },
-                                label = {
-                                    Text(
-                                        text = label,
-                                        fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
-                                        fontSize = 11.sp
-                                    )
-                                },
-                                colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
-                                    selectedTextColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primary else DarkTeal,
-                                    indicatorColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.primaryContainer else LightTeal,
-                                    unselectedIconColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f) else MediumTeal.copy(alpha = 0.7f),
-                                    unselectedTextColor = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f) else MediumTeal.copy(alpha = 0.7f)
-                                )
-                            )
-                        }
-                    }
                 }
             }
         }

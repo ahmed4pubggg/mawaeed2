@@ -40,6 +40,7 @@ import com.example.ui.theme.AlarmBgMid
 import com.example.ui.theme.AlarmBgTop
 import com.example.ui.theme.AlarmGold
 import com.example.ui.theme.AlarmGoldDeep
+import com.example.ui.theme.SuccessColor
 import com.example.ui.theme.MyApplicationTheme
 import kotlin.math.roundToInt
 
@@ -450,21 +451,23 @@ private fun SlideToStopControl(onStop: () -> Unit) {
                 .onSizeChanged { trackWidthPx = it.width.toFloat() },
             contentAlignment = Alignment.CenterStart
         ) {
-            // Dynamic color/gradient behind the dragged button
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .width(fillWidthDp)
-                    .background(
-                        brush = Brush.horizontalGradient(
-                            colors = listOf(
-                                AlarmGold.copy(alpha = 0.12f),
-                                AlarmGoldDeep.copy(alpha = 0.55f * dragProgress)
-                            )
-                        ),
-                        shape = RoundedCornerShape(32.dp)
-                    )
-            )
+            // Dynamic color/gradient behind the dragged button (green success interactive indicator)
+            if (animatedOffset > 0f) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .width(fillWidthDp)
+                        .background(
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(
+                                    SuccessColor.copy(alpha = 0.15f),
+                                    SuccessColor.copy(alpha = 0.85f * dragProgress)
+                                )
+                            ),
+                            shape = RoundedCornerShape(32.dp)
+                        )
+                )
+            }
 
             Text(
                 text = "اِسْحَبْ لِإِيقَافِ التَّنْبِيهِ »",
