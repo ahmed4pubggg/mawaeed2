@@ -1,6 +1,7 @@
 package com.example.ui
 
 import android.content.Context
+import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
@@ -29,6 +30,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -229,185 +231,379 @@ fun AlarmScreen(
             )
         }
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 28.dp, vertical = 36.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            // Glowing pulsing badge
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier.size(170.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(160.dp)
-                        .scale(scale)
-                        .background(
-                            brush = Brush.radialGradient(
-                                colors = listOf(AlarmGold.copy(alpha = auraAlpha), Color.Transparent)
-                            ),
-                            shape = CircleShape
-                        )
-                )
+        val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-                Box(
-                    modifier = Modifier
-                        .size(128.dp)
-                        .background(AlarmBgMid, shape = CircleShape)
-                        .border(BorderStroke(2.dp, AlarmGold.copy(alpha = 0.6f)), CircleShape)
-                )
-
-                Box(
-                    modifier = Modifier
-                        .size(94.dp)
-                        .background(
-                            brush = Brush.verticalGradient(colors = listOf(AlarmGold, AlarmGoldDeep)),
-                            shape = CircleShape
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Alarm,
-                        contentDescription = "المنبه",
-                        tint = AlarmBgBottom,
-                        modifier = Modifier
-                            .size(48.dp)
-                            .rotate(wiggleRotation)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(26.dp))
-
-            Text(
-                text = "حَانَ الآنَ مَوْعِدُ الحِصَّةِ",
-                style = MaterialTheme.typography.headlineMedium.copy(
-                    fontWeight = FontWeight.ExtraBold,
-                    color = AlarmGold,
-                    fontSize = 22.sp,
-                    letterSpacing = 0.4.sp
-                ),
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(18.dp))
-
-            // Premium glass card with appointment details
-            Card(
+        if (isLandscape) {
+            Row(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .border(
-                        border = BorderStroke(
-                            1.5.dp,
-                            Brush.verticalGradient(
-                                listOf(
-                                    AlarmGold.copy(alpha = 0.75f),
-                                    Color.White.copy(alpha = 0.35f),
-                                    AlarmBgMid.copy(alpha = 0.4f)
-                                )
-                            )
-                        ),
-                        shape = RoundedCornerShape(28.dp)
-                    ),
-                colors = CardDefaults.cardColors(
-                    containerColor = AlarmBgTop.copy(alpha = 0.4f)
-                ),
-                shape = RoundedCornerShape(28.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 16.dp)
+                    .fillMaxSize()
+                    .safeDrawingPadding()
+                    .padding(horizontal = 24.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(24.dp)
             ) {
+                // Left Column: Alarm badge and Text/Card
                 Column(
                     modifier = Modifier
-                        .padding(26.dp)
-                        .fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                        .weight(1.1f)
+                        .fillMaxHeight(),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .background(AlarmBgMid, shape = RoundedCornerShape(12.dp))
-                            .border(BorderStroke(1.dp, AlarmGold.copy(alpha = 0.3f)), RoundedCornerShape(12.dp))
-                            .padding(horizontal = 14.dp, vertical = 6.dp)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier.padding(bottom = 12.dp)
                     ) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.size(54.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(50.dp)
+                                    .scale(scale)
+                                    .background(
+                                        brush = Brush.radialGradient(
+                                            colors = listOf(AlarmGold.copy(alpha = auraAlpha), Color.Transparent)
+                                        ),
+                                        shape = CircleShape
+                                    )
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .background(AlarmBgMid, shape = CircleShape)
+                                    .border(BorderStroke(1.dp, AlarmGold.copy(alpha = 0.6f)), CircleShape)
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .background(
+                                        brush = Brush.verticalGradient(colors = listOf(AlarmGold, AlarmGoldDeep)),
+                                        shape = CircleShape
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Alarm,
+                                    contentDescription = "المنبه",
+                                    tint = AlarmBgBottom,
+                                    modifier = Modifier
+                                        .size(16.dp)
+                                        .rotate(wiggleRotation)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(10.dp))
                         Text(
-                            text = "يَوْمُ $day • السَّاعَةُ $formattedTime",
+                            text = "حَانَ الآنَ مَوْعِدُ الحِصَّةِ",
                             style = MaterialTheme.typography.titleMedium.copy(
-                                fontSize = 16.sp,
+                                fontWeight = FontWeight.ExtraBold,
                                 color = AlarmGold,
-                                fontWeight = FontWeight.Bold
-                            ),
-                            textAlign = TextAlign.Center
+                                fontSize = 16.sp
+                            )
                         )
                     }
 
-                    Text(
-                        text = text,
-                        style = MaterialTheme.typography.headlineLarge.copy(
-                            fontSize = 27.sp,
-                            color = Color.White,
-                            fontWeight = FontWeight.Black,
-                            lineHeight = 36.sp
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(
+                                border = BorderStroke(
+                                    1.dp,
+                                    Brush.verticalGradient(
+                                        listOf(
+                                            AlarmGold.copy(alpha = 0.75f),
+                                            Color.White.copy(alpha = 0.35f),
+                                            AlarmBgMid.copy(alpha = 0.4f)
+                                        )
+                                    )
+                                ),
+                                shape = RoundedCornerShape(20.dp)
+                            ),
+                        colors = CardDefaults.cardColors(
+                            containerColor = AlarmBgTop.copy(alpha = 0.4f)
                         ),
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
+                        shape = RoundedCornerShape(20.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .padding(12.dp)
+                                .fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .background(AlarmBgMid, shape = RoundedCornerShape(8.dp))
+                                    .border(BorderStroke(1.dp, AlarmGold.copy(alpha = 0.3f)), RoundedCornerShape(8.dp))
+                                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = "يَوْمُ $day • السَّاعَةُ $formattedTime",
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontSize = 13.sp,
+                                        color = AlarmGold,
+                                        fontWeight = FontWeight.Bold
+                                    ),
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+
+                            Text(
+                                text = text,
+                                style = MaterialTheme.typography.titleLarge.copy(
+                                    fontSize = 18.sp,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Black,
+                                    lineHeight = 24.sp
+                                ),
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(34.dp))
-
-            // Interactive slide-to-stop control (primary action), plus a compact snooze button.
-            // Functionally identical to before: stop / snooze(10 min) — just presented in a
-            // more modern, tactile way that's harder to trigger by accident.
-            SlideToStopControl(onStop = onStop)
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            OutlinedButton(
-                onClick = onSnooze,
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = AlarmGold.copy(alpha = 0.9f)
-                ),
-                border = BorderStroke(1.5.dp, AlarmGold.copy(alpha = 0.45f)),
-                shape = RoundedCornerShape(18.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(54.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
-                    modifier = Modifier.fillMaxSize()
+                // Right Column: Slide to stop, snooze, footer
+                Column(
+                    modifier = Modifier
+                        .weight(0.9f)
+                        .fillMaxHeight(),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.Snooze,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    SlideToStopControl(onStop = onStop)
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    OutlinedButton(
+                        onClick = onSnooze,
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = AlarmGold.copy(alpha = 0.9f)
+                        ),
+                        border = BorderStroke(1.5.dp, AlarmGold.copy(alpha = 0.45f)),
+                        shape = RoundedCornerShape(18.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Snooze,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "تَأْجِيلٌ (١٠ دَقَائِق)",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp
+                                )
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
                     Text(
-                        text = "تَأْجِيلٌ (١٠ دَقَائِق)",
-                        style = MaterialTheme.typography.titleMedium.copy(
+                        text = "بواسطة الشيخ أحمد النمس غفر الله له ولوالديه",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = AlarmGold.copy(alpha = 0.85f),
                             fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp
-                        )
+                            fontSize = 11.sp
+                        ),
+                        textAlign = TextAlign.Center
                     )
                 }
             }
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 28.dp, vertical = 36.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                // Glowing pulsing badge
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.size(170.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(160.dp)
+                            .scale(scale)
+                            .background(
+                                brush = Brush.radialGradient(
+                                    colors = listOf(AlarmGold.copy(alpha = auraAlpha), Color.Transparent)
+                                ),
+                                shape = CircleShape
+                            )
+                    )
 
-            Spacer(modifier = Modifier.height(26.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(128.dp)
+                            .background(AlarmBgMid, shape = CircleShape)
+                            .border(BorderStroke(2.dp, AlarmGold.copy(alpha = 0.6f)), CircleShape)
+                    )
 
-            Text(
-                text = "بواسطة الشيخ أحمد النمس غفر الله له ولوالديه",
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    color = AlarmGold.copy(alpha = 0.85f),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp
-                ),
-                textAlign = TextAlign.Center
-            )
+                    Box(
+                        modifier = Modifier
+                            .size(94.dp)
+                            .background(
+                                brush = Brush.verticalGradient(colors = listOf(AlarmGold, AlarmGoldDeep)),
+                                shape = CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Alarm,
+                            contentDescription = "المنبه",
+                            tint = AlarmBgBottom,
+                            modifier = Modifier
+                                .size(48.dp)
+                                .rotate(wiggleRotation)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(26.dp))
+
+                Text(
+                    text = "حَانَ الآنَ مَوْعِدُ الحِصَّةِ",
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        color = AlarmGold,
+                        fontSize = 22.sp,
+                        letterSpacing = 0.4.sp
+                    ),
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                // Premium glass card with appointment details
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(
+                            border = BorderStroke(
+                                1.5.dp,
+                                Brush.verticalGradient(
+                                    listOf(
+                                        AlarmGold.copy(alpha = 0.75f),
+                                        Color.White.copy(alpha = 0.35f),
+                                        AlarmBgMid.copy(alpha = 0.4f)
+                                    )
+                                )
+                            ),
+                            shape = RoundedCornerShape(28.dp)
+                        ),
+                    colors = CardDefaults.cardColors(
+                        containerColor = AlarmBgTop.copy(alpha = 0.4f)
+                    ),
+                    shape = RoundedCornerShape(28.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 16.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .padding(26.dp)
+                            .fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .background(AlarmBgMid, shape = RoundedCornerShape(12.dp))
+                                .border(BorderStroke(1.dp, AlarmGold.copy(alpha = 0.3f)), RoundedCornerShape(12.dp))
+                                .padding(horizontal = 14.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = "يَوْمُ $day • السَّاعَةُ $formattedTime",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontSize = 16.sp,
+                                    color = AlarmGold,
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                textAlign = TextAlign.Center
+                            )
+                        }
+
+                        Text(
+                            text = text,
+                            style = MaterialTheme.typography.headlineLarge.copy(
+                                fontSize = 27.sp,
+                                color = Color.White,
+                                fontWeight = FontWeight.Black,
+                                lineHeight = 36.sp
+                            ),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(34.dp))
+
+                // Interactive slide-to-stop control (primary action), plus a compact snooze button.
+                // Functionally identical to before: stop / snooze(10 min) — just presented in a
+                // more modern, tactile way that's harder to trigger by accident.
+                SlideToStopControl(onStop = onStop)
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                OutlinedButton(
+                    onClick = onSnooze,
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = AlarmGold.copy(alpha = 0.9f)
+                    ),
+                    border = BorderStroke(1.5.dp, AlarmGold.copy(alpha = 0.45f)),
+                    shape = RoundedCornerShape(18.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(54.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Snooze,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "تَأْجِيلٌ (١٠ دَقَائِق)",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp
+                            )
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(26.dp))
+
+                Text(
+                    text = "بواسطة الشيخ أحمد النمس غفر الله له ولوالديه",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        color = AlarmGold.copy(alpha = 0.85f),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    ),
+                    textAlign = TextAlign.Center
+                )
+            }
         }
     }
 }
